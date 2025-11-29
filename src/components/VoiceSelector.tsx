@@ -35,8 +35,10 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const models = [
+    { id: 'eleven_v3', name: 'Eleven v3 (Flagship, Most Expressive)' },
     { id: 'eleven_turbo_v2_5', name: 'Turbo v2.5 (Fastest, Multilingual)' },
-    { id: 'eleven_multilingual_v2', name: 'Multilingual v2 (Better Quality)' },
+    { id: 'eleven_flash_v2_5', name: 'Flash v2.5 (Ultra-low Latency)' },
+    { id: 'eleven_multilingual_v2', name: 'Multilingual v2 (Legacy High Quality)' },
     { id: 'eleven_monolingual_v1', name: 'English v1 (Legacy)' },
   ];
 
