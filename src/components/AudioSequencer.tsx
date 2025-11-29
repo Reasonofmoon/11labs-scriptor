@@ -183,7 +183,13 @@ export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencer
           url = await fetchAudio(index);
         } catch (fetchError: any) {
           console.warn(`API fetch failed for index ${index}`, fetchError);
-          setError(`Generation Failed: ${fetchError.message}`);
+          
+          let errorMessage = `Generation Failed: ${fetchError.message}`;
+          if (fetchError.message.includes('quota_exceeded')) {
+            errorMessage = "⚠️ API Quota Exceeded. Please check your ElevenLabs credits.";
+          }
+          
+          setError(errorMessage);
           speakFallback(items[index].content);
           return;
         }
