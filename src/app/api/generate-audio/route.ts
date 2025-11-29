@@ -32,9 +32,11 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           text: finalText,
           model_id: modelId || 'eleven_turbo_v2_5',
-          voice_settings: voiceSettings || {
-            stability: 0.5,
-            similarity_boost: 0.75,
+          voice_settings: {
+            stability: [0.0, 0.5, 1.0].reduce((prev, curr) => 
+              Math.abs(curr - (voiceSettings?.stability ?? 0.5)) < Math.abs(prev - (voiceSettings?.stability ?? 0.5)) ? curr : prev
+            ),
+            similarity_boost: voiceSettings?.similarity_boost ?? 0.75,
           }
         }),
       });

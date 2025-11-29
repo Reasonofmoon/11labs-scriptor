@@ -34,7 +34,7 @@ export async function generateScriptAction(
     Structure:
     {
       "items": [
-        { "type": "speech", "content": "The text to be spoken...", "voiceSettings": { "style": 0.5, "stability": 0.7 } },
+        { "type": "speech", "content": "The text to be spoken...", "voiceSettings": { "stability": 0.5, "similarity_boost": 0.75 } },
         { "type": "sfx", "content": "Description of sound effect (e.g., magical glitter, page turn, drum roll)" }
       ]
     }
