@@ -13,25 +13,58 @@ interface AudioSequencerProps {
   onAnalyserReady?: (analyser: AnalyserNode) => void;
 }
 
-export const AudioSequencer: React.FC<AudioSequencerProps> = ({ 
+export interface AudioSequencerRef {
+  getAudioBlobs: () => Map<number, string>;
+  fetchAllAudio: () => Promise<Map<number, Blob>>;
+}
+
+export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencerProps>(({ 
   items, 
   mode,
   voiceId,
-  modelId, // Destructure modelId
+  modelId,
   onItemStart,
   onComplete,
   onAnalyserReady
-}) => {
+}, ref) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [error, setError] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   
   // Cache for audio blobs: index -> BlobUrl
   const audioCache = useRef<Map<number, string>>(new Map());
+  // Cache for raw blobs (for export)
+  const blobCache = useRef<Map<number, Blob>>(new Map());
+  
   const prefetchQueue = useRef<Set<number>>(new Set());
+
+  React.useImperativeHandle(ref, () => ({
+    getAudioBlobs: () => audioCache.current,
+    fetchAllAudio: async () => {
+      const results = new Map<number, Blob>();
+      const total = items.length;
+      
+      for (let i = 0; i < total; i++) {
+        setDownloadProgress(Math.round(((i + 1) / total) * 100));
+        try {
+          if (blobCache.current.has(i)) {
+            results.set(i, blobCache.current.get(i)!);
+          } else {
+            const blob = await fetchAudioBlob(i);
+            results.set(i, blob);
+          }
+        } catch (e) {
+          console.error(`Failed to fetch audio for item ${i}`, e);
+        }
+      }
+      setDownloadProgress(0);
+      return results;
+    }
+  }));
 
   useEffect(() => {
     audioRef.current = new Audio();
@@ -43,6 +76,7 @@ export const AudioSequencer: React.FC<AudioSequencerProps> = ({
       // Cleanup blobs
       audioCache.current.forEach(url => URL.revokeObjectURL(url));
       audioCache.current.clear();
+      blobCache.current.clear();
     };
   }, []);
 
@@ -50,11 +84,12 @@ export const AudioSequencer: React.FC<AudioSequencerProps> = ({
   useEffect(() => {
     audioCache.current.forEach(url => URL.revokeObjectURL(url));
     audioCache.current.clear();
+    blobCache.current.clear();
   }, [voiceId, modelId]);
 
-  const fetchAudio = useCallback(async (index: number): Promise<string> => {
-    if (audioCache.current.has(index)) {
-      return audioCache.current.get(index)!;
+  const fetchAudioBlob = useCallback(async (index: number): Promise<Blob> => {
+    if (blobCache.current.has(index)) {
+      return blobCache.current.get(index)!;
     }
 
     const item = items[index];
@@ -69,19 +104,32 @@ export const AudioSequencer: React.FC<AudioSequencerProps> = ({
         voiceSettings: item.voiceSettings,
         mode,
         voiceId,
-        modelId // Pass modelId to API
+        modelId
       })
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch audio');
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch audio: ${errorText}`);
     }
 
     const blob = await response.blob();
+    blobCache.current.set(index, blob);
+    
+    // Also update URL cache for playback
     const url = URL.createObjectURL(blob);
     audioCache.current.set(index, url);
-    return url;
+    
+    return blob;
   }, [items, mode, voiceId, modelId]);
+
+  const fetchAudio = useCallback(async (index: number): Promise<string> => {
+    if (audioCache.current.has(index)) {
+      return audioCache.current.get(index)!;
+    }
+    const blob = await fetchAudioBlob(index);
+    return audioCache.current.get(index)!;
+  }, [fetchAudioBlob]);
 
   const prefetchNext = useCallback(async (startIndex: number) => {
     // Prefetch next 2 items
@@ -109,6 +157,7 @@ export const AudioSequencer: React.FC<AudioSequencerProps> = ({
     if (abortControllerRef.current?.signal.aborted) return;
 
     const speakFallback = (text: string) => {
+      setError(`API Error: Falling back to browser TTS for item ${index + 1}`);
       if (!('speechSynthesis' in window)) {
         console.error('Browser does not support speech synthesis');
         playNext(index + 1);
@@ -116,35 +165,25 @@ export const AudioSequencer: React.FC<AudioSequencerProps> = ({
       }
   
       const utterance = new SpeechSynthesisUtterance(text);
+      // ... (rest of fallback logic same as before)
       const voices = window.speechSynthesis.getVoices();
       const preferredVoice = voices.find(v => v.lang.includes('en')) || voices[0];
       if (preferredVoice) utterance.voice = preferredVoice;
   
-      utterance.onstart = () => {
-        // Already called onItemStart above
-      };
-  
-      utterance.onend = () => {
-        playNext(index + 1);
-      };
-  
-      utterance.onerror = (e) => {
-        console.error('Speech synthesis error:', e);
-        playNext(index + 1);
-      };
-  
+      utterance.onend = () => playNext(index + 1);
+      utterance.onerror = () => playNext(index + 1);
       window.speechSynthesis.speak(utterance);
     };
 
     try {
       let url = audioCache.current.get(index);
       
-      // Try to fetch if not cached
       if (!url) {
         try {
           url = await fetchAudio(index);
-        } catch (fetchError) {
-          console.warn(`API fetch failed for index ${index}, falling back to browser TTS`, fetchError);
+        } catch (fetchError: any) {
+          console.warn(`API fetch failed for index ${index}`, fetchError);
+          setError(`Generation Failed: ${fetchError.message}`);
           speakFallback(items[index].content);
           return;
         }
@@ -152,37 +191,31 @@ export const AudioSequencer: React.FC<AudioSequencerProps> = ({
 
       if (url && audioRef.current) {
         audioRef.current.src = url;
-        audioRef.current.onplay = () => { /* already handled */ };
-        audioRef.current.onended = () => {
-          playNext(index + 1);
-        };
-        audioRef.current.onerror = () => {
-           console.warn(`Audio playback failed for index ${index}, falling back to browser TTS`);
-           speakFallback(items[index].content);
-        };
+        audioRef.current.onended = () => playNext(index + 1);
+        audioRef.current.onerror = () => speakFallback(items[index].content);
         
         await audioRef.current.play();
         prefetchNext(index + 1);
       }
     } catch (err) {
-      console.error('Playback setup error for index', index, err);
+      console.error('Playback setup error', err);
       speakFallback(items[index].content);
     }
   }, [items, onItemStart, onComplete, prefetchNext, fetchAudio]);
 
+  // ... (AudioContext logic same as before)
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   const initAudioContext = () => {
-    if (!audioContextRef.current) {
+     if (!audioContextRef.current) {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       audioContextRef.current = new AudioContext();
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 256;
       
       if (audioRef.current) {
-        // Check if source already exists (shouldn't if context is new, but good practice)
         if (!sourceNodeRef.current) {
              sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
              sourceNodeRef.current.connect(analyserRef.current);
@@ -239,9 +272,17 @@ export const AudioSequencer: React.FC<AudioSequencerProps> = ({
         </div>
       )}
 
+      {downloadProgress > 0 && (
+        <div className="text-emerald-400 text-sm font-medium animate-pulse">
+          Preparing Export... {downloadProgress}%
+        </div>
+      )}
+
       {error && (
-        <div className="text-red-400 text-sm">{error}</div>
+        <div className="text-red-400 text-sm max-w-[200px] truncate" title={error}>{error}</div>
       )}
     </div>
   );
-};
+});
+
+AudioSequencer.displayName = 'AudioSequencer';

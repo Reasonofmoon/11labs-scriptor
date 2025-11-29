@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
       // If it's an SFX item, wrap it in audio tags for v3 model
       const finalText = type === 'sfx' ? `[${text}]` : text;
 
-      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    console.log(`Generating audio: Voice=${voiceId}, Model=${modelId || 'default'}, TextLength=${finalText.length}`);
+    
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
         method: 'POST',
         headers: {
           'Accept': 'audio/mpeg',
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           text: finalText,
-          model_id: modelId || 'eleven_turbo_v2_5', // Default to Turbo v2.5
+          model_id: modelId || 'eleven_turbo_v2_5',
           voice_settings: voiceSettings || {
             stability: 0.5,
             similarity_boost: 0.75,
@@ -41,22 +43,18 @@ export async function POST(req: NextRequest) {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`ElevenLabs API Error (${response.status}):`, errorText);
         throw new Error(`TTS API Error: ${errorText}`);
       }
 
       const audioBuffer = await response.arrayBuffer();
+      console.log('Audio generation successful, buffer size:', audioBuffer.byteLength);
       return new NextResponse(audioBuffer, {
         headers: { 'Content-Type': 'audio/mpeg' },
       });
 
     } 
-    /* 
-    // SFX Endpoint disabled to save quota - using Audio Tags instead
-    else if (type === 'sfx') {
-      ...
-    } 
-    */
-
+    
     return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
 
   } catch (error: any) {

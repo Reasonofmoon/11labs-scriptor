@@ -3,11 +3,12 @@
 import React, { useState } from 'react';
 import { Mode, DifficultyLevel, ProblemType, ScriptItem } from '@/lib/types';
 import { generateScript } from '@/lib/script-generator';
-import { AudioSequencer } from '@/components/AudioSequencer';
+import { AudioSequencer, AudioSequencerRef } from '@/components/AudioSequencer';
 import { Visualizer } from '@/components/Visualizer';
 import { ScriptDisplay } from '@/components/ScriptDisplay';
-import { BookOpen, GraduationCap, Sparkles, BrainCircuit, Sun, Moon } from 'lucide-react';
+import { BookOpen, GraduationCap, Sparkles, BrainCircuit, Sun, Moon, Download, FileText, FileJson, FileAudio } from 'lucide-react';
 import { VoiceSelector } from '@/components/VoiceSelector';
+import { downloadScriptAsJson, downloadScriptAsText, generateAndDownloadSrt } from '@/lib/export-utils';
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>('children_book');
@@ -23,6 +24,8 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
   const [selectedModelId, setSelectedModelId] = useState<string>('eleven_turbo_v2_5');
+  
+  const sequencerRef = React.useRef<AudioSequencerRef>(null);
 
   React.useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
@@ -43,6 +46,20 @@ export default function Home() {
       alert('스크립트 생성 중 오류가 발생했습니다.');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadText = () => downloadScriptAsText(scriptItems);
+  const handleDownloadJson = () => downloadScriptAsJson(scriptItems);
+  
+  const handleDownloadSrt = async () => {
+    if (!sequencerRef.current) return;
+    try {
+      const blobs = await sequencerRef.current.fetchAllAudio();
+      await generateAndDownloadSrt(scriptItems, blobs);
+    } catch (error) {
+      console.error('Failed to export SRT:', error);
+      alert('Failed to export SRT. Please try again.');
     }
   };
 
@@ -182,6 +199,7 @@ export default function Home() {
                 </div>
                 
                 <AudioSequencer 
+                  ref={sequencerRef}
                   items={scriptItems} 
                   mode={mode}
                   voiceId={selectedVoiceId}
@@ -196,6 +214,27 @@ export default function Home() {
                   }}
                   onAnalyserReady={setAnalyser}
                 />
+
+                <div className="flex gap-2 mt-4">
+                  <button 
+                    onClick={handleDownloadText}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <FileText size={16} /> Script (TXT)
+                  </button>
+                  <button 
+                    onClick={handleDownloadJson}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <FileJson size={16} /> Script (JSON)
+                  </button>
+                  <button 
+                    onClick={handleDownloadSrt}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <FileAudio size={16} /> Export SRT
+                  </button>
+                </div>
               </div>
             )}
           </div>
