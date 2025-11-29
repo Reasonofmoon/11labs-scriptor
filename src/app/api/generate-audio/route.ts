@@ -12,10 +12,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { text, type, voiceSettings, mode } = await req.json();
+    const { text, type, voiceSettings, mode, voiceId: requestedVoiceId, modelId } = await req.json();
 
     if (type === 'speech' || type === 'sfx') {
-      const voiceId = mode === 'children_book' ? VOICE_ID_MINHEE : VOICE_ID_DAL;
+      const voiceId = requestedVoiceId || (mode === 'children_book' ? VOICE_ID_MINHEE : VOICE_ID_DAL);
       
       // If it's an SFX item, wrap it in audio tags for v3 model
       const finalText = type === 'sfx' ? `[${text}]` : text;
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           text: finalText,
-          model_id: 'eleven_turbo_v2_5', // Updated to Turbo v2.5 for better performance/tags
+          model_id: modelId || 'eleven_turbo_v2_5', // Default to Turbo v2.5
           voice_settings: voiceSettings || {
             stability: 0.5,
             similarity_boost: 0.75,

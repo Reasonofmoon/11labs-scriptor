@@ -7,6 +7,7 @@ import { AudioSequencer } from '@/components/AudioSequencer';
 import { Visualizer } from '@/components/Visualizer';
 import { ScriptDisplay } from '@/components/ScriptDisplay';
 import { BookOpen, GraduationCap, Sparkles, BrainCircuit, Sun, Moon } from 'lucide-react';
+import { VoiceSelector } from '@/components/VoiceSelector';
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>('children_book');
@@ -20,6 +21,8 @@ export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
+  const [selectedModelId, setSelectedModelId] = useState<string>('eleven_turbo_v2_5');
 
   React.useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
@@ -132,6 +135,19 @@ export default function Home() {
                   <option value="Advanced">Advanced</option>
                 </select>
               </div>
+
+              <div className="mb-4">
+                <label className={`block mb-2 text-sm font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Select Voice
+                </label>
+                <VoiceSelector 
+                  selectedVoiceId={selectedVoiceId} 
+                  onVoiceSelect={setSelectedVoiceId}
+                  selectedModelId={selectedModelId}
+                  onModelSelect={setSelectedModelId}
+                  className="w-full"
+                />
+              </div>
               
               <textarea
                 value={inputText}
@@ -168,6 +184,8 @@ export default function Home() {
                 <AudioSequencer 
                   items={scriptItems} 
                   mode={mode}
+                  voiceId={selectedVoiceId}
+                  modelId={selectedModelId}
                   onItemStart={(index) => {
                     setCurrentPlayIndex(index);
                     setIsPlaying(true);

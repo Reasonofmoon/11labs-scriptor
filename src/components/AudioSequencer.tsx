@@ -6,6 +6,8 @@ import { ScriptItem, Mode } from '@/lib/types';
 interface AudioSequencerProps {
   items: ScriptItem[];
   mode: Mode;
+  voiceId?: string;
+  modelId?: string; // Add modelId prop
   onItemStart?: (index: number) => void;
   onComplete?: () => void;
   onAnalyserReady?: (analyser: AnalyserNode) => void;
@@ -14,6 +16,8 @@ interface AudioSequencerProps {
 export const AudioSequencer: React.FC<AudioSequencerProps> = ({ 
   items, 
   mode,
+  voiceId,
+  modelId, // Destructure modelId
   onItemStart,
   onComplete,
   onAnalyserReady
@@ -42,6 +46,12 @@ export const AudioSequencer: React.FC<AudioSequencerProps> = ({
     };
   }, []);
 
+  // Clear cache when voiceId or modelId changes
+  useEffect(() => {
+    audioCache.current.forEach(url => URL.revokeObjectURL(url));
+    audioCache.current.clear();
+  }, [voiceId, modelId]);
+
   const fetchAudio = useCallback(async (index: number): Promise<string> => {
     if (audioCache.current.has(index)) {
       return audioCache.current.get(index)!;
@@ -57,7 +67,9 @@ export const AudioSequencer: React.FC<AudioSequencerProps> = ({
         text: item.content,
         type: item.type,
         voiceSettings: item.voiceSettings,
-        mode
+        mode,
+        voiceId,
+        modelId // Pass modelId to API
       })
     });
 
@@ -69,7 +81,7 @@ export const AudioSequencer: React.FC<AudioSequencerProps> = ({
     const url = URL.createObjectURL(blob);
     audioCache.current.set(index, url);
     return url;
-  }, [items, mode]);
+  }, [items, mode, voiceId, modelId]);
 
   const prefetchNext = useCallback(async (startIndex: number) => {
     // Prefetch next 2 items
