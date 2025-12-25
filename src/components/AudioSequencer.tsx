@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ScriptItem, Mode } from '@/lib/types';
+import { AudioPlayer } from '@/lib/audio-player';
+import { AudioCache } from '@/lib/audio-cache';
 
 interface AudioSequencerProps {
   items: ScriptItem[];
   mode: Mode;
   voiceId?: string;
-  modelId?: string; // Add modelId prop
+  modelId?: string;
   onItemStart?: (index: number) => void;
   onComplete?: () => void;
   onAnalyserReady?: (analyser: AnalyserNode) => void;
@@ -18,8 +20,8 @@ export interface AudioSequencerRef {
   fetchAllAudio: () => Promise<Map<number, Blob>>;
 }
 
-export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencerProps>(({ 
-  items, 
+export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencerProps>(({
+  items,
   mode,
   voiceId,
   modelId,
@@ -31,66 +33,52 @@ export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencer
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState(0);
-  
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  
-  // Cache for audio blobs: index -> BlobUrl
-  const audioCache = useRef<Map<number, string>>(new Map());
-  // Cache for raw blobs (for export)
-  const blobCache = useRef<Map<number, Blob>>(new Map());
-  
+
+  const audioPlayerRef = useRef<AudioPlayer | null>(null);
+  const audioCacheRef = useRef<AudioCache>(new AudioCache());
   const prefetchQueue = useRef<Set<number>>(new Set());
 
   React.useImperativeHandle(ref, () => ({
-    getAudioBlobs: () => audioCache.current,
+    getAudioBlobs: () => {
+      const urlMap = new Map<number, string>();
+      items.forEach((_, index) => {
+        const url = audioCacheRef.current.getUrl(index);
+        if (url) urlMap.set(index, url);
+      });
+      return urlMap;
+    },
     fetchAllAudio: async () => {
-      const results = new Map<number, Blob>();
       const total = items.length;
-      
+
       for (let i = 0; i < total; i++) {
         setDownloadProgress(Math.round(((i + 1) / total) * 100));
         try {
-          if (blobCache.current.has(i)) {
-            results.set(i, blobCache.current.get(i)!);
-          } else {
-            const blob = await fetchAudioBlob(i);
-            results.set(i, blob);
-          }
+          await fetchAudioBlob(i);
         } catch (e) {
           console.error(`Failed to fetch audio for item ${i}`, e);
         }
       }
       setDownloadProgress(0);
-      return results;
+      return audioCacheRef.current.getAllBlobs();
     }
   }));
 
   useEffect(() => {
-    audioRef.current = new Audio();
+    audioPlayerRef.current = new AudioPlayer();
+
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-      }
-      // Cleanup blobs
-      audioCache.current.forEach(url => URL.revokeObjectURL(url));
-      audioCache.current.clear();
-      blobCache.current.clear();
+      audioPlayerRef.current?.destroy();
+      audioCacheRef.current.clear();
     };
   }, []);
 
-  // Clear cache when voiceId or modelId changes
   useEffect(() => {
-    audioCache.current.forEach(url => URL.revokeObjectURL(url));
-    audioCache.current.clear();
-    blobCache.current.clear();
+    audioCacheRef.current.clear();
   }, [voiceId, modelId]);
 
   const fetchAudioBlob = useCallback(async (index: number): Promise<Blob> => {
-    if (blobCache.current.has(index)) {
-      return blobCache.current.get(index)!;
-    }
+    const cached = audioCacheRef.current.getBlob(index);
+    if (cached) return cached;
 
     const item = items[index];
     if (!item) throw new Error('Item not found');
@@ -114,27 +102,22 @@ export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencer
     }
 
     const blob = await response.blob();
-    blobCache.current.set(index, blob);
-    
-    // Also update URL cache for playback
-    const url = URL.createObjectURL(blob);
-    audioCache.current.set(index, url);
-    
+    audioCacheRef.current.set(index, blob);
+
     return blob;
   }, [items, mode, voiceId, modelId]);
 
   const fetchAudio = useCallback(async (index: number): Promise<string> => {
-    if (audioCache.current.has(index)) {
-      return audioCache.current.get(index)!;
-    }
-    const blob = await fetchAudioBlob(index);
-    return audioCache.current.get(index)!;
+    const cachedUrl = audioCacheRef.current.getUrl(index);
+    if (cachedUrl) return cachedUrl;
+
+    await fetchAudioBlob(index);
+    return audioCacheRef.current.getUrl(index)!;
   }, [fetchAudioBlob]);
 
   const prefetchNext = useCallback(async (startIndex: number) => {
-    // Prefetch next 2 items
     for (let i = startIndex; i < Math.min(startIndex + 2, items.length); i++) {
-      if (!audioCache.current.has(i) && !prefetchQueue.current.has(i)) {
+      if (!audioCacheRef.current.has(i) && !prefetchQueue.current.has(i)) {
         prefetchQueue.current.add(i);
         fetchAudio(i).catch(console.error).finally(() => {
           prefetchQueue.current.delete(i);
@@ -154,53 +137,49 @@ export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencer
     setCurrentIndex(index);
     onItemStart?.(index);
 
-    if (abortControllerRef.current?.signal.aborted) return;
-
     const speakFallback = (text: string) => {
-      setError(`API Error: Falling back to browser TTS for item ${index + 1}`);
+      setError(`Falling back to browser TTS for item ${index + 1}`);
       if (!('speechSynthesis' in window)) {
         console.error('Browser does not support speech synthesis');
         playNext(index + 1);
         return;
       }
-  
+
       const utterance = new SpeechSynthesisUtterance(text);
-      // ... (rest of fallback logic same as before)
       const voices = window.speechSynthesis.getVoices();
       const preferredVoice = voices.find(v => v.lang.includes('en')) || voices[0];
       if (preferredVoice) utterance.voice = preferredVoice;
-  
+
       utterance.onend = () => playNext(index + 1);
       utterance.onerror = () => playNext(index + 1);
       window.speechSynthesis.speak(utterance);
     };
 
     try {
-      let url = audioCache.current.get(index);
-      
+      let url = audioCacheRef.current.getUrl(index);
+
       if (!url) {
         try {
           url = await fetchAudio(index);
         } catch (fetchError: any) {
           console.warn(`API fetch failed for index ${index}`, fetchError);
-          
+
           let errorMessage = `Generation Failed: ${fetchError.message}`;
           if (fetchError.message.includes('quota_exceeded')) {
-            errorMessage = "⚠️ API Quota Exceeded. Please check your ElevenLabs credits.";
+            errorMessage = "API Quota Exceeded. Please check your ElevenLabs credits.";
           }
-          
+
           setError(errorMessage);
           speakFallback(items[index].content);
           return;
         }
       }
 
-      if (url && audioRef.current) {
-        audioRef.current.src = url;
-        audioRef.current.onended = () => playNext(index + 1);
-        audioRef.current.onerror = () => speakFallback(items[index].content);
-        
-        await audioRef.current.play();
+      if (url && audioPlayerRef.current) {
+        audioPlayerRef.current.onEnded(() => playNext(index + 1));
+        audioPlayerRef.current.onError(() => speakFallback(items[index].content));
+
+        await audioPlayerRef.current.play(url);
         prefetchNext(index + 1);
       }
     } catch (err) {
@@ -209,50 +188,29 @@ export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencer
     }
   }, [items, onItemStart, onComplete, prefetchNext, fetchAudio]);
 
-  // ... (AudioContext logic same as before)
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const initAudioContext = useCallback(() => {
+    if (!audioPlayerRef.current) return;
 
-  const initAudioContext = () => {
-     if (!audioContextRef.current) {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      audioContextRef.current = new AudioContext();
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 256;
-      
-      if (audioRef.current) {
-        if (!sourceNodeRef.current) {
-             sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
-             sourceNodeRef.current.connect(analyserRef.current);
-             analyserRef.current.connect(audioContextRef.current.destination);
-        }
-      }
-      
-      if (onAnalyserReady && analyserRef.current) {
-        onAnalyserReady(analyserRef.current);
-      }
-    } else if (audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume();
+    const analyser = audioPlayerRef.current.initializeAnalyser();
+    if (analyser && onAnalyserReady) {
+      onAnalyserReady(analyser);
     }
-  };
+  }, [onAnalyserReady]);
 
-  const startPlayback = () => {
+  const startPlayback = useCallback(() => {
     if (items.length === 0) return;
     initAudioContext();
     setIsPlaying(true);
     setError(null);
     playNext(0);
-  };
+  }, [items, initAudioContext, playNext]);
 
-  const stopPlayback = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+  const stopPlayback = useCallback(() => {
+    audioPlayerRef.current?.pause();
     window.speechSynthesis.cancel();
     setIsPlaying(false);
     setCurrentIndex(-1);
-  };
+  }, []);
 
   return (
     <div className="flex items-center gap-4 p-4 bg-slate-800 rounded-xl border border-slate-700">

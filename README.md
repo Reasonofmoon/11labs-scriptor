@@ -1,36 +1,154 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ReadMaster AI
 
-## Getting Started
+An immersive audiobook generator powered by ElevenLabs AI. Transform any text into high-quality, expressive audio with multiple voice options and models.
 
-First, run the development server:
+## Features
+
+- Real-time text-to-speech generation using ElevenLabs API
+- Multiple voice and model selection
+- Two modes: Story Mode and Exam Mode
+- Audio visualization with waveform display
+- Export options: TXT, JSON, and SRT formats
+- Prefetching and caching for smooth playback
+- Fallback to browser TTS if API fails
+
+## Prerequisites
+
+- Node.js 18+ installed
+- ElevenLabs API key (get one at [elevenlabs.io](https://elevenlabs.io))
+
+## Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Configure your ElevenLabs API key:
+
+Create or edit the `.env` file in the project root:
+
+```bash
+ELEVENLABS_API_KEY=your_actual_api_key_here
+```
+
+3. Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ElevenLabs Configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The application uses the following ElevenLabs settings:
 
-## Learn More
+- **Default Model**: `eleven_turbo_v2_5` (fastest, multilingual)
+- **Available Models**:
+  - Eleven v3 (Flagship, most expressive)
+  - Turbo v2.5 (Fastest, multilingual)
+  - Flash v2.5 (Ultra-low latency)
+  - Multilingual v2 (Legacy high quality)
+  - English v1 (Legacy)
 
-To learn more about Next.js, take a look at the following resources:
+- **Voice Settings**:
+  - Stability: 0.5 (normalized to 0.0, 0.5, or 1.0)
+  - Similarity Boost: 0.75
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── generate-audio/   # ElevenLabs TTS API endpoint
+│   │   └── voices/            # Voice list API endpoint
+│   └── page.tsx               # Main application page
+├── components/
+│   ├── AudioSequencer.tsx     # Audio playback controller
+│   ├── ScriptDisplay.tsx      # Script viewer
+│   ├── Visualizer.tsx         # Audio visualizer
+│   └── VoiceSelector.tsx      # Voice/model selector
+└── lib/
+    ├── audio-player.ts        # Audio player utility
+    ├── audio-cache.ts         # Audio caching system
+    ├── export-utils.ts        # Export functionality
+    ├── script-generator.ts    # Script generation
+    └── types.ts               # TypeScript types
+```
 
-## Deploy on Vercel
+## API Routes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### POST /api/generate-audio
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Generates audio from text using ElevenLabs API.
+
+**Request Body**:
+```json
+{
+  "text": "Text to convert to speech",
+  "type": "speech" | "sfx",
+  "mode": "children_book" | "exam_passage",
+  "voiceId": "optional_voice_id",
+  "modelId": "optional_model_id",
+  "voiceSettings": {
+    "stability": 0.5,
+    "similarity_boost": 0.75
+  }
+}
+```
+
+**Response**: Audio file (audio/mpeg)
+
+### GET /api/voices
+
+Retrieves available voices from ElevenLabs.
+
+**Response**:
+```json
+{
+  "voices": [
+    {
+      "voice_id": "...",
+      "name": "...",
+      "category": "...",
+      "labels": {...}
+    }
+  ]
+}
+```
+
+## Usage
+
+1. Select a mode (Story or Exam)
+2. Choose a voice and model
+3. Paste your text
+4. Click "Generate Immersive Audio"
+5. Play the generated audio
+6. Export in your preferred format
+
+## Building for Production
+
+```bash
+npm run build
+npm start
+```
+
+## Troubleshooting
+
+**API Key not working**: Ensure your ElevenLabs API key is correctly set in the `.env` file
+
+**Quota exceeded**: Check your ElevenLabs account credits
+
+**Audio not playing**: The app will fallback to browser TTS if the API fails
+
+## Technologies Used
+
+- Next.js 16
+- React 19
+- ElevenLabs API
+- Tailwind CSS
+- Framer Motion
+- TypeScript
