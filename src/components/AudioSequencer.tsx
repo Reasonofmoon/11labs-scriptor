@@ -213,37 +213,85 @@ export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencer
   }, []);
 
   return (
-    <div className="flex items-center gap-4 p-4 bg-slate-800 rounded-xl border border-slate-700">
-      <button
-        onClick={isPlaying ? stopPlayback : startPlayback}
-        className={`px-6 py-3 rounded-lg font-bold transition-all ${
-          isPlaying 
-            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' 
-            : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20'
-        }`}
-      >
-        {isPlaying ? '⏹️ Stop' : '▶️ Play Immersive Audio'}
-      </button>
-      
-      {isPlaying && (
-        <div className="flex-1">
-          <div className="text-sm text-slate-400 mb-1">
-            Now Playing ({currentIndex + 1}/{items.length})
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+        <button
+          onClick={isPlaying ? stopPlayback : startPlayback}
+          disabled={items.length === 0}
+          className={`relative flex-1 sm:flex-none px-8 py-4 rounded-2xl font-bold text-lg transition-all transform overflow-hidden group ${
+            isPlaying
+              ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white hover:from-red-600 hover:to-pink-600 shadow-xl shadow-red-500/30'
+              : items.length === 0
+              ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 shadow-2xl shadow-emerald-500/30 hover:scale-105 active:scale-95'
+          }`}
+        >
+          {isPlaying ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-4 h-4 bg-white rounded-sm animate-pulse" />
+              Stop
+            </span>
+          ) : (
+            <>
+              <span className="flex items-center justify-center gap-2">
+                <span className="text-2xl">▶</span>
+                Play Audio
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+            </>
+          )}
+        </button>
+
+        {isPlaying && (
+          <div className="flex-1 bg-gradient-to-r from-slate-800/50 to-slate-700/50 backdrop-blur-sm border-2 border-slate-600 rounded-2xl p-4 animate-in slide-in-from-right duration-300">
+            <div className="flex items-center gap-3">
+              <div className="flex space-x-1">
+                <div className="w-1 h-8 bg-emerald-500 rounded-full animate-pulse" style={{animationDelay: '0ms'}} />
+                <div className="w-1 h-8 bg-teal-500 rounded-full animate-pulse" style={{animationDelay: '150ms'}} />
+                <div className="w-1 h-8 bg-cyan-500 rounded-full animate-pulse" style={{animationDelay: '300ms'}} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-slate-400 font-semibold mb-1">
+                  NOW PLAYING ({currentIndex + 1} of {items.length})
+                </div>
+                <div className="text-slate-200 font-bold truncate flex items-center gap-2">
+                  <span className="text-lg">
+                    {items[currentIndex]?.type === 'sfx' ? '🎵' : '🗣️'}
+                  </span>
+                  {items[currentIndex]?.type === 'sfx' ? 'Sound Effect' : 'Narrator'}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="text-slate-200 font-medium truncate">
-            {items[currentIndex]?.type === 'sfx' ? '🔊 Sound Effect' : '🗣️ Narrator'}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {downloadProgress > 0 && (
-        <div className="text-emerald-400 text-sm font-medium animate-pulse">
-          Preparing Export... {downloadProgress}%
+        <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-2 border-emerald-500/30 rounded-2xl p-4 animate-in slide-in-from-bottom duration-300">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-6 h-6 border-3 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+            <span className="text-emerald-400 font-bold">Preparing Export...</span>
+            <span className="ml-auto text-emerald-400 font-bold text-lg">{downloadProgress}%</span>
+          </div>
+          <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300 rounded-full"
+              style={{ width: `${downloadProgress}%` }}
+            />
+          </div>
         </div>
       )}
 
       {error && (
-        <div className="text-red-400 text-sm max-w-[200px] truncate" title={error}>{error}</div>
+        <div className="bg-red-500/10 border-2 border-red-500/30 rounded-2xl p-4 animate-in slide-in-from-bottom duration-300">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-red-400 font-bold mb-1">Error</div>
+              <div className="text-red-300 text-sm" title={error}>{error}</div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
