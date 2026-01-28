@@ -43,12 +43,44 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   ];
 
   useEffect(() => {
+    const CACHE_KEY = 'readmaster_voices_v1';
+    const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
     const fetchVoices = async () => {
       try {
+        // Check cache first
+        try {
+          const cached = localStorage.getItem(CACHE_KEY);
+          if (cached) {
+            const { data, timestamp } = JSON.parse(cached);
+            const age = Date.now() - timestamp;
+
+            if (age < CACHE_DURATION) {
+              setVoices(data);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to parse cached voices', e);
+          // Continue to fetch
+        }
+
         const response = await fetch('/api/voices');
         if (!response.ok) throw new Error('Failed to fetch voices');
         const data = await response.json();
-        setVoices(data.voices || []);
+        const voiceList = data.voices || [];
+        setVoices(voiceList);
+
+        // Update cache
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
+            data: voiceList,
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          console.warn('Failed to cache voices', e);
+        }
       } catch (err) {
         console.error(err);
         setError('Failed to load voices');
