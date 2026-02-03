@@ -20,7 +20,7 @@ export interface AudioSequencerRef {
   fetchAllAudio: () => Promise<Map<number, Blob>>;
 }
 
-export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencerProps>(({
+export const AudioSequencer = React.memo(React.forwardRef<AudioSequencerRef, AudioSequencerProps>(({
   items,
   mode,
   voiceId,
@@ -65,10 +65,11 @@ export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencer
 
   useEffect(() => {
     audioPlayerRef.current = new AudioPlayer();
+    const audioCache = audioCacheRef.current;
 
     return () => {
       audioPlayerRef.current?.destroy();
-      audioCacheRef.current.clear();
+      audioCache.clear();
     };
   }, []);
 
@@ -161,11 +162,12 @@ export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencer
       if (!url) {
         try {
           url = await fetchAudio(index);
-        } catch (fetchError: any) {
+        } catch (fetchError) {
           console.warn(`API fetch failed for index ${index}`, fetchError);
 
-          let errorMessage = `Generation Failed: ${fetchError.message}`;
-          if (fetchError.message.includes('quota_exceeded')) {
+          const message = fetchError instanceof Error ? fetchError.message : String(fetchError);
+          let errorMessage = `Generation Failed: ${message}`;
+          if (message.includes('quota_exceeded')) {
             errorMessage = "API Quota Exceeded. Please check your ElevenLabs credits.";
           }
 
@@ -295,6 +297,6 @@ export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencer
       )}
     </div>
   );
-});
+}));
 
 AudioSequencer.displayName = 'AudioSequencer';
