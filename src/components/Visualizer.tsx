@@ -36,6 +36,9 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
+        // Optimization: Stop drawing if off-screen to save performance
+        if (x >= canvas.width) break;
+
         const barHeight = (dataArray[i] / 255) * canvas.height;
 
         const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
@@ -68,7 +71,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${[12, 20, 10, 24, 16, 8, 18, 14][i % 8]}px` }}
           />
         ))}
       </div>
