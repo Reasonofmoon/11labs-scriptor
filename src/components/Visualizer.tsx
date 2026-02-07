@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import { Mode } from '@/lib/types';
 
 interface VisualizerProps {
@@ -9,7 +9,11 @@ interface VisualizerProps {
   analyser?: AnalyserNode | null;
 }
 
-export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyser }) => {
+// ⚡ Bolt Optimization: Use deterministic heights to prevent hydration mismatches
+// caused by Math.random() during server/client rendering differences.
+const IDLE_BAR_HEIGHTS = [12, 20, 16, 8, 24, 14, 18, 10];
+
+const VisualizerComponent: React.FC<VisualizerProps> = ({ isPlaying, mode, analyser }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const primaryColor = mode === 'children_book' ? '#34d399' : '#fbbf24';
   const secondaryColor = mode === 'children_book' ? '#14b8a6' : '#f59e0b';
@@ -64,11 +68,11 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   if (!isPlaying) {
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
-        {[...Array(8)].map((_, i) => (
+        {IDLE_BAR_HEIGHTS.map((height, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${height}px` }}
           />
         ))}
       </div>
@@ -89,3 +93,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     </div>
   );
 };
+
+// ⚡ Bolt Optimization: Memoize component to prevent unnecessary re-renders
+// when parent state changes (e.g. typing in text area) but visualizer props are stable.
+export const Visualizer = memo(VisualizerComponent);
