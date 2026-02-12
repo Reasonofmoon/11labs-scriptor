@@ -9,6 +9,9 @@ interface VisualizerProps {
   analyser?: AnalyserNode | null;
 }
 
+// Pre-calculate random values for idle state to prevent hydration mismatches
+const IDLE_BAR_HEIGHTS = [12, 16, 20, 14, 18, 12, 16, 20];
+
 export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyser }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const primaryColor = mode === 'children_book' ? '#34d399' : '#fbbf24';
@@ -25,6 +28,18 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     const dataArray = new Uint8Array(bufferLength);
     let animationId: number;
 
+    // Pre-calculate gradients to avoid creating thousands of objects per frame
+    const gradientCache = new Array(256);
+    for (let i = 0; i < 256; i++) {
+      const barHeight = (i / 255) * canvas.height;
+      const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+      gradient.addColorStop(0, primaryColor);
+      gradient.addColorStop(1, secondaryColor);
+      gradientCache[i] = gradient;
+    }
+
+    const barWidth = (canvas.width / bufferLength) * 3;
+
     const draw = () => {
       animationId = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
@@ -32,17 +47,16 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       ctx.fillStyle = 'rgba(15, 23, 42, 0.2)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const barWidth = (canvas.width / bufferLength) * 3;
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        // Optimization: Stop drawing if off-screen
+        if (x > canvas.width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        const val = dataArray[i];
+        const barHeight = (val / 255) * canvas.height;
 
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = gradientCache[val];
 
         const centerY = canvas.height / 2;
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
@@ -68,7 +82,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${IDLE_BAR_HEIGHTS[i % IDLE_BAR_HEIGHTS.length]}px` }}
           />
         ))}
       </div>
