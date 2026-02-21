@@ -9,7 +9,11 @@ interface VisualizerProps {
   analyser?: AnalyserNode | null;
 }
 
-export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyser }) => {
+// Deterministic heights for idle state to prevent hydration mismatch
+// Previously used Math.random() which caused server/client mismatch
+const IDLE_BAR_HEIGHTS = [14, 18, 12, 20, 16, 22, 15, 19];
+
+const VisualizerComponent: React.FC<VisualizerProps> = ({ isPlaying, mode, analyser }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const primaryColor = mode === 'children_book' ? '#34d399' : '#fbbf24';
   const secondaryColor = mode === 'children_book' ? '#14b8a6' : '#f59e0b';
@@ -29,22 +33,32 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       animationId = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
+      // Clear with transparency for trail effect
       ctx.fillStyle = 'rgba(15, 23, 42, 0.2)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      // Optimization: Calculate barWidth once per frame
       const barWidth = (canvas.width / bufferLength) * 3;
+
+      // Optimization: Create gradient once per frame instead of per bar
+      // This reduces object creation from ~60k/sec (assuming 1024 bins @ 60fps) to ~60/sec
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, primaryColor);
+      gradient.addColorStop(1, secondaryColor);
+      ctx.fillStyle = gradient;
+
       let x = 0;
+      const centerY = canvas.height / 2;
 
       for (let i = 0; i < bufferLength; i++) {
+        // Optimization: Stop drawing if we're off screen
+        // The original logic (width/length * 3) means we draw 3x the canvas width
+        // Breaking early saves ~66% of loop iterations
+        if (x > canvas.width) break;
+
         const barHeight = (dataArray[i] / 255) * canvas.height;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
-
-        ctx.fillStyle = gradient;
-
-        const centerY = canvas.height / 2;
+        // Draw bar centered vertically
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
 
         x += barWidth;
@@ -64,11 +78,11 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   if (!isPlaying) {
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
-        {[...Array(8)].map((_, i) => (
+        {IDLE_BAR_HEIGHTS.map((height, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${height}px` }}
           />
         ))}
       </div>
@@ -89,3 +103,6 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     </div>
   );
 };
+
+// Optimization: Memoize to prevent unnecessary re-renders from parent
+export const Visualizer = React.memo(VisualizerComponent);
