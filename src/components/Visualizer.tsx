@@ -9,7 +9,10 @@ interface VisualizerProps {
   analyser?: AnalyserNode | null;
 }
 
-export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyser }) => {
+// Pre-defined heights to avoid hydration mismatch and unnecessary re-renders
+const IDLE_BAR_HEIGHTS = [12, 16, 14, 20, 15, 18, 13, 19];
+
+export const Visualizer: React.FC<VisualizerProps> = React.memo(({ isPlaying, mode, analyser }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const primaryColor = mode === 'children_book' ? '#34d399' : '#fbbf24';
   const secondaryColor = mode === 'children_book' ? '#14b8a6' : '#f59e0b';
@@ -36,6 +39,11 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
+        // Optimization: Stop drawing if we've exceeded the canvas width
+        // The barWidth calculation multiplies by 3, so typically ~2/3 of bars are off-screen.
+        // This saves unnecessary gradient creation and fillRect calls.
+        if (x > canvas.width) break;
+
         const barHeight = (dataArray[i] / 255) * canvas.height;
 
         const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
@@ -64,11 +72,11 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   if (!isPlaying) {
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
-        {[...Array(8)].map((_, i) => (
+        {IDLE_BAR_HEIGHTS.map((height, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${height}px` }}
           />
         ))}
       </div>
@@ -88,4 +96,6 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       </div>
     </div>
   );
-};
+});
+
+Visualizer.displayName = 'Visualizer';
