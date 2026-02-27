@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import { Mode } from '@/lib/types';
 
 interface VisualizerProps {
@@ -9,7 +9,11 @@ interface VisualizerProps {
   analyser?: AnalyserNode | null;
 }
 
-export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyser }) => {
+// Pre-defined heights for idle bars to ensure consistent SSR/hydration and avoid layout shifts
+const IDLE_BAR_HEIGHTS = [12, 18, 14, 22, 16, 10, 20, 14];
+
+// Memoized to prevent re-renders from parent updates when props haven't changed
+export const Visualizer: React.FC<VisualizerProps> = memo(({ isPlaying, mode, analyser }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const primaryColor = mode === 'children_book' ? '#34d399' : '#fbbf24';
   const secondaryColor = mode === 'children_book' ? '#14b8a6' : '#f59e0b';
@@ -23,31 +27,54 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
+
+    // Pre-calculate invariant layout values
+    const barWidth = (canvas.width / bufferLength) * 3;
+    const centerY = canvas.height / 2;
+    const height = canvas.height;
+
+    // Optimization: Pre-calculate gradients for all possible byte values (0-255)
+    // avoiding thousands of createLinearGradient calls per second in the render loop
+    const gradientCache: CanvasGradient[] = new Array(256);
+    for (let i = 0; i < 256; i++) {
+      const barHeight = (i / 255) * height;
+      const gradient = ctx.createLinearGradient(0, height - barHeight, 0, height);
+      gradient.addColorStop(0, primaryColor);
+      gradient.addColorStop(1, secondaryColor);
+      gradientCache[i] = gradient;
+    }
+
     let animationId: number;
 
     const draw = () => {
       animationId = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
+      // Semi-transparent fill for trail effect
       ctx.fillStyle = 'rgba(15, 23, 42, 0.2)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, canvas.width, height);
 
-      const barWidth = (canvas.width / bufferLength) * 3;
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        const value = dataArray[i];
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        // Skip drawing if bar is invisible
+        if (value === 0) {
+            x += barWidth;
+            continue;
+        }
 
-        ctx.fillStyle = gradient;
+        const barHeight = (value / 255) * height;
 
-        const centerY = canvas.height / 2;
+        // Use cached gradient
+        ctx.fillStyle = gradientCache[value];
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
 
         x += barWidth;
+
+        // Optimization: Stop drawing if we've exceeded canvas width
+        if (x > canvas.width) break;
       }
     };
 
@@ -56,7 +83,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     return () => {
       cancelAnimationFrame(animationId);
       if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, height);
       }
     };
   }, [isPlaying, analyser, primaryColor, secondaryColor]);
@@ -64,11 +91,11 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   if (!isPlaying) {
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
-        {[...Array(8)].map((_, i) => (
+        {IDLE_BAR_HEIGHTS.map((height, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${height}px` }}
           />
         ))}
       </div>
@@ -88,4 +115,6 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       </div>
     </div>
   );
-};
+});
+
+Visualizer.displayName = 'Visualizer';
