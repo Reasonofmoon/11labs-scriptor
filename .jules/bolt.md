@@ -1,0 +1,3 @@
+## 2024-02-28 - Canvas Animation Rendering Bottlenecks
+**Learning:** HTML5 Canvas animations inside a React `useEffect` can be severely bottlenecked by creating expensive objects (like `CanvasGradient`) inside the `requestAnimationFrame` loop, and iterating through large data arrays (like audio frequency bins) past the visible canvas bounds. Next.js hydration also breaks when using `Math.random()` in React renders.
+**Action:** Always pre-calculate or cache expensive canvas objects outside the render loop (using maps or arrays). Add bounds checks (`if (x > canvas.width) break;`) to skip processing off-screen elements. Use deterministic arrays instead of impure functions for randomized visual states.
