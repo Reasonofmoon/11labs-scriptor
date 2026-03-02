@@ -1,0 +1,3 @@
+## 2026-03-02 - [Canvas LinearGradient Optimization]
+**Learning:** Recreating `LinearGradient` objects inside the inner loop of a canvas `requestAnimationFrame` draw function (e.g., for every single bar in an audio visualizer) introduces massive garbage collection and processing overhead. Creating a single top-to-bottom or center-to-edge gradient outside the loop and reusing it is significantly faster, as `fillRect` will automatically clip the gradient to the drawn shape.
+**Action:** Always inspect canvas `requestAnimationFrame` inner loops for expensive object creation like gradients, paths, or offscreen canvases. Pull them out of the loop and ideally out of the frame callback entirely if they don't change.
