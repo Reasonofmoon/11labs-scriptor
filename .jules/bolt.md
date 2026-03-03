@@ -1,0 +1,3 @@
+## 2024-03-20 - [Optimize Canvas Visualizer Rendering]
+**Learning:** In HTML5 Canvas `requestAnimationFrame` loops, creating `LinearGradient` objects repeatedly per frame can cause massive memory allocations and garbage collection stutter. Additionally, processing `analyser.frequencyBinCount` items fully even when they extend beyond the visible canvas width wastes CPU cycles.
+**Action:** When working with canvas animations derived from fixed-range data (like audio frequency bytes 0-255), pre-calculate and cache expensive objects like gradients in an array keyed by the data value outside the loop. Always include an early `break` check (`if (x > canvas.width) break;`) when iterating over elements drawn sequentially across a fixed canvas width.
