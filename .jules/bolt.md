@@ -1,0 +1,3 @@
+## 2024-05-24 - Canvas Animation Gradient Caching Optimization
+**Learning:** Calling `ctx.createLinearGradient()` repeatedly in a `requestAnimationFrame` loop on a per-frequency-bin basis (often ~1024 bins/frame) creates excessive temporary objects and triggers significant garbage collection churn, causing frame drops and rendering stutters.
+**Action:** Pre-calculate and cache expensive Canvas objects like `LinearGradient` outside the render loop. Since our `analyser.getByteFrequencyData()` values only range from 0 to 255, we can compute an array of exactly 256 gradients on initialization and just index into it during rendering. This changes O(n) object allocations per frame to O(1) array lookups.
