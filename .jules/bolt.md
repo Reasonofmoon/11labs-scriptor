@@ -1,0 +1,3 @@
+## 2024-05-24 - HTML5 Canvas Render Loop Optimization in React
+**Learning:** Instantiating `LinearGradient` objects inside a `requestAnimationFrame` loop on every frame for hundreds of data points causes significant unnecessary garbage collection and performance overhead. Furthermore, executing canvas drawing operations for shapes that fall completely outside the viewport (`x > canvas.width`) wastes CPU cycles.
+**Action:** Always pre-calculate and cache expensive canvas objects (like gradients). For audio visualizers, a fixed-size cache (size 256 for 8-bit frequency data) is optimal. Additionally, introduce explicit bounds checks (`if (x > canvas.width) break;`) inside drawing loops to discard off-screen rendering early.
