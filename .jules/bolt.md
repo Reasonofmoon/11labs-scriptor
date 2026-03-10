@@ -1,0 +1,7 @@
+## 2024-05-18 - Canvas Rendering in React useEffect
+**Learning:** Instantiating `CanvasGradient` objects (via `ctx.createLinearGradient`) within the hot path of `requestAnimationFrame` is highly inefficient and causes significant garbage collection overhead. Since audio frequency byte values are constrained to 0-255, it is much more performant to cache all 256 possible gradient states outside the render loop. Also, calculating drawing properties for off-screen canvas elements wastes CPU cycles.
+**Action:** Always pre-calculate expensive static or semi-static properties (like gradients or complex paths) into a local cache before starting a `requestAnimationFrame` loop. Always implement a bounds check (e.g. `if (x > canvas.width) break;`) when iterating over arrays (like frequency data) that generate visual representations which exceed the screen bounds.
+
+## 2024-05-18 - React Strict Purity and Next.js Hydration with Idle States
+**Learning:** Using `Math.random()` to generate randomized styles for idle UI states (like inactive audio bars) violates React's strict purity rules (which enforce deterministic renders) and causes hydration mismatches in Next.js between the server and client.
+**Action:** Always use deterministic, constant data (like a pre-defined array `IDLE_BAR_HEIGHTS`) for initial static states instead of random number generators to satisfy component purity and guarantee hydration stability.
