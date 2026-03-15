@@ -20,7 +20,7 @@ export interface AudioSequencerRef {
   fetchAllAudio: () => Promise<Map<number, Blob>>;
 }
 
-export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencerProps>(({
+export const AudioSequencer = React.memo(React.forwardRef<AudioSequencerRef, AudioSequencerProps>(({
   items,
   mode,
   voiceId,
@@ -295,6 +295,6 @@ export const AudioSequencer = React.forwardRef<AudioSequencerRef, AudioSequencer
       )}
     </div>
   );
-});
+}));
 
 AudioSequencer.displayName = 'AudioSequencer';
