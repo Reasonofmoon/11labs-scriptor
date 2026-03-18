@@ -1,0 +1,3 @@
+## 2024-05-24 - HTML5 Canvas Render Loop Optimization
+**Learning:** In React `useEffect` rendering loops (like audio visualizers drawing `requestAnimationFrame`), recreating objects like `LinearGradient` every frame creates severe memory churn and GC pauses. Bounding loops with `if (x > canvas.width) break;` also saves processing cycles.
+**Action:** When animating on Canvas based on a finite range of values (e.g. `Uint8Array` 0-255), calculate and cache the corresponding `LinearGradient` objects in a local array *outside* the animation frame loop, and ensure you use bounding box logic to exit early from loops when drawing off-screen.
