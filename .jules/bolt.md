@@ -1,0 +1,3 @@
+## 2025-02-13 - Optimizing Web Audio API Canvas Animations in React
+**Learning:** The Web Audio API provides frequency data as a `Uint8Array` (strictly 0-255). In high-frequency React `requestAnimationFrame` loops, creating objects like `CanvasGradient` for every bar drawn is extremely expensive. Because the data set is bounded to 256 exact integer values, we can pre-calculate and cache all possible rendering states outside the loop.
+**Action:** Always check if dynamic data inputs to canvas loops are bounded sets. If so, pre-calculate the expensive objects (like gradients) into a local cache array keyed by the data value (e.g., `gradientCache[dataArray[i]]`) before entering the `requestAnimationFrame` drawing loop.
