@@ -1,0 +1,17 @@
+
+> readmaster-ai@0.1.0 dev
+> next dev
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.4 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://192.168.0.2:3000
+
+ ✓ Starting...
+ ✓ Ready in 1127ms
+ ○ Compiling / ...
+ GET / 200 in 7.8s (compile: 7.3s, render: 492ms)
+ELEVENLABS_API_KEY is not configured
+ GET /api/voices 500 in 856ms (compile: 818ms, render: 38ms)
+No LLM API keys found on server.
+ POST / 200 in 66ms (compile: 14ms, render: 52ms)
