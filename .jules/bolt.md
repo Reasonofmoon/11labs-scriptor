@@ -1,0 +1,3 @@
+## 2025-05-24 - Canvas Optimization in React Effect Loops
+**Learning:** When working with Canvas in a React `useEffect` for high-frequency updates (e.g. 60 FPS visualizers), do not instantiate expensive objects like `createLinearGradient` inside the `requestAnimationFrame` loop. Since Web Audio API frequency data is bounded (0-255), these can be pre-calculated and cached. Additionally, `Math.random()` in render violates strict React purity rules and Next.js hydration.
+**Action:** Always pre-calculate finite bounded values outside of drawing loops and use deterministic constants instead of `Math.random()` during component render to satisfy strict purity rules and avoid hydration issues.
