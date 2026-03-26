@@ -9,7 +9,9 @@ interface VisualizerProps {
   analyser?: AnalyserNode | null;
 }
 
-export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyser }) => {
+const IDLE_BAR_HEIGHTS = [12, 20, 15, 24, 18, 14, 22, 16];
+
+export const Visualizer: React.FC<VisualizerProps> = React.memo(({ isPlaying, mode, analyser }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const primaryColor = mode === 'children_book' ? '#34d399' : '#fbbf24';
   const secondaryColor = mode === 'children_book' ? '#14b8a6' : '#f59e0b';
@@ -24,6 +26,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     let animationId: number;
+    const gradientCache = new Array<CanvasGradient>(256);
 
     const draw = () => {
       animationId = requestAnimationFrame(draw);
@@ -36,11 +39,18 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        if (x > canvas.width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        const dataValue = dataArray[i];
+        let gradient = gradientCache[dataValue];
+        const barHeight = (dataValue / 255) * canvas.height;
+
+        if (!gradient) {
+          gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+          gradient.addColorStop(0, primaryColor);
+          gradient.addColorStop(1, secondaryColor);
+          gradientCache[dataValue] = gradient;
+        }
 
         ctx.fillStyle = gradient;
 
@@ -68,7 +78,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${IDLE_BAR_HEIGHTS[i]}px` }}
           />
         ))}
       </div>
@@ -88,4 +98,6 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       </div>
     </div>
   );
-};
+});
+
+Visualizer.displayName = 'Visualizer';
