@@ -1,0 +1,4 @@
+
+## 2025-03-05 - Canvas Object Allocation in requestAnimationFrame
+**Learning:** Instantiating objects like `CanvasGradient` (via `ctx.createLinearGradient`) inside a `requestAnimationFrame` drawing loop is a significant performance bottleneck. Even though it is native, doing it hundreds of times per frame per array iteration causes massive memory allocation pressure and stalls frame rates. In `Visualizer.tsx`, recreating gradients directly inside the loop based on audio frequency array lengths causes unnecessary calculations.
+**Action:** When working with HTML5 Canvas animations in React `useEffect`, calculate reusable objects (like `CanvasGradient`) ahead of time based on their finite domain (e.g., audio frequency bytes range from `0-255`) and store them in an array mapping index to object. Inside the inner loop, perform a simple array look-up by value instead of a function call.
