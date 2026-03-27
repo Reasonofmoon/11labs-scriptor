@@ -1,0 +1,14 @@
+
+> readmaster-ai@0.1.0 dev
+> next dev
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.4 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://192.168.0.2:3000
+
+ ✓ Starting...
+ ✓ Ready in 1051ms
+ ○ Compiling /test-visualizer ...
+ GET /test-visualizer 200 in 4.2s (compile: 4.0s, render: 285ms)
+ ✓ Compiled in 59ms
