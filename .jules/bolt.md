@@ -1,0 +1,3 @@
+## 2024-03-20 - Canvas API Gradient Bottleneck
+**Learning:** Creating `LinearGradient` objects inside a `requestAnimationFrame` drawing loop is a significant bottleneck for the HTML5 canvas, as hundreds of new gradient objects can be created and discarded per frame during the drawing of audio frequency bars. This application also processes bars that exceed the actual canvas width unnecessarily.
+**Action:** When implementing canvas-based animations in React `useEffect`, pre-calculate and cache expensive canvas objects like `LinearGradient` (e.g. keyed by bounded integer height) outside the `requestAnimationFrame` loop, and introduce explicit bounds checks (`if (x > canvas.width) break;`) to skip rendering of off-screen components.
