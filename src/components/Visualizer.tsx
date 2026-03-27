@@ -29,22 +29,29 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       animationId = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.2)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Cache canvas dimensions to avoid property access in loop
+      const width = canvas.width;
+      const height = canvas.height;
 
-      const barWidth = (canvas.width / bufferLength) * 3;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.2)';
+      ctx.fillRect(0, 0, width, height);
+
+      const barWidth = (width / bufferLength) * 3;
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        // Optimization: Stop drawing if we're off-screen
+        if (x > width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+        const barHeight = (dataArray[i] / 255) * height;
+
+        const gradient = ctx.createLinearGradient(0, height - barHeight, 0, height);
         gradient.addColorStop(0, primaryColor);
         gradient.addColorStop(1, secondaryColor);
 
         ctx.fillStyle = gradient;
 
-        const centerY = canvas.height / 2;
+        const centerY = height / 2;
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
 
         x += barWidth;
@@ -68,7 +75,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${8 + ((i * 7) % 16)}px` }}
           />
         ))}
       </div>
