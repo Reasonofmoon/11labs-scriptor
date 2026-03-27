@@ -31,7 +31,7 @@ export default function Home() {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
 
-  const handleGenerate = async () => {
+  const handleGenerate = React.useCallback(async () => {
     if (!inputText.trim()) return;
     
     setIsGenerating(true);
@@ -47,12 +47,12 @@ export default function Home() {
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [inputText, mode, level, problemType]);
 
-  const handleDownloadText = () => downloadScriptAsText(scriptItems);
-  const handleDownloadJson = () => downloadScriptAsJson(scriptItems);
+  const handleDownloadText = React.useCallback(() => downloadScriptAsText(scriptItems), [scriptItems]);
+  const handleDownloadJson = React.useCallback(() => downloadScriptAsJson(scriptItems), [scriptItems]);
   
-  const handleDownloadSrt = async () => {
+  const handleDownloadSrt = React.useCallback(async () => {
     if (!sequencerRef.current) return;
     try {
       const blobs = await sequencerRef.current.fetchAllAudio();
@@ -61,7 +61,7 @@ export default function Home() {
       console.error('Failed to export SRT:', error);
       alert('Failed to export SRT. Please try again.');
     }
-  };
+  }, [scriptItems]);
 
   const themeColor = mode === 'children_book' ? 'emerald' : 'amber';
   const bgGradient = mode === 'children_book' 
@@ -232,14 +232,14 @@ export default function Home() {
                   mode={mode}
                   voiceId={selectedVoiceId}
                   modelId={selectedModelId}
-                  onItemStart={(index) => {
+                  onItemStart={React.useCallback((index: number) => {
                     setCurrentPlayIndex(index);
                     setIsPlaying(true);
-                  }}
-                  onComplete={() => {
+                  }, [])}
+                  onComplete={React.useCallback(() => {
                     setIsPlaying(false);
                     setCurrentPlayIndex(-1);
-                  }}
+                  }, [])}
                   onAnalyserReady={setAnalyser}
                 />
 

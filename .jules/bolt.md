@@ -1,0 +1,4 @@
+
+## 2025-02-13 - Visualizer component canvas gradient caching and React prop memoization
+**Learning:** Found that `Visualizer` was creating new LinearGradient objects on every requestAnimationFrame (~60fps) loop in `draw` for each bar in the histogram. By pre-calculating gradients in an array, we prevent memory allocation and garbage collection churn in a hot loop. We also skipped calculations using `if (x > canvas.width) break` earlier instead of drawing offscreen paths. Second, inline arrow functions on frequently-rendered parent components were triggering unnecessary re-renders of large child trees like `AudioSequencer`.
+**Action:** Always pre-calculate expensive objects (like gradients or colors) out of the `requestAnimationFrame` render loop if they depend on fixed height constraints. Ensure function props passed to complex components are memoized with `useCallback` when parent contains highly dynamic state to prevent cascading re-renders.
