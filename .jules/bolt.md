@@ -1,0 +1,3 @@
+## 2026-01-29 - Avoid Ref Churn in Lists
+**Learning:** When rendering a list of memoized components that require ref access (e.g., for `scrollIntoView`), passing a new ref callback (e.g., `ref={el => refs[i] = el}`) defeats memoization or causes ref churn (detach/attach) on every parent render.
+**Action:** Instead of `forwardRef`, pass a stable `registerRef` callback (e.g., `(index, el) => void`) to the child component. The child can then call this stable callback in its own `ref` prop (e.g., `ref={el => registerRef(index, el)}`). Since the arrow function inside the child is created only when the child renders, and the child is memoized, this prevents unnecessary ref updates when the child's props haven't changed.
