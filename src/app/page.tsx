@@ -31,6 +31,16 @@ export default function Home() {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
 
+  const handleItemStart = React.useCallback((index: number) => {
+    setCurrentPlayIndex(index);
+    setIsPlaying(true);
+  }, []);
+
+  const handleComplete = React.useCallback(() => {
+    setIsPlaying(false);
+    setCurrentPlayIndex(-1);
+  }, []);
+
   const handleGenerate = async () => {
     if (!inputText.trim()) return;
     
@@ -232,14 +242,8 @@ export default function Home() {
                   mode={mode}
                   voiceId={selectedVoiceId}
                   modelId={selectedModelId}
-                  onItemStart={(index) => {
-                    setCurrentPlayIndex(index);
-                    setIsPlaying(true);
-                  }}
-                  onComplete={() => {
-                    setIsPlaying(false);
-                    setCurrentPlayIndex(-1);
-                  }}
+                  onItemStart={handleItemStart}
+                  onComplete={handleComplete}
                   onAnalyserReady={setAnalyser}
                 />
 

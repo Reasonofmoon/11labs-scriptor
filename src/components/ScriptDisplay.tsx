@@ -10,7 +10,7 @@ interface ScriptDisplayProps {
   mode: Mode;
 }
 
-export const ScriptDisplay: React.FC<ScriptDisplayProps> = ({ items, currentIndex, mode }) => {
+export const ScriptDisplay = React.memo<ScriptDisplayProps>(({ items, currentIndex, mode }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -23,7 +23,6 @@ export const ScriptDisplay: React.FC<ScriptDisplayProps> = ({ items, currentInde
     }
   }, [currentIndex]);
 
-  const themeColor = mode === 'children_book' ? 'text-emerald-400' : 'text-amber-400';
   const borderColor = mode === 'children_book' ? 'border-emerald-500' : 'border-amber-500';
   const bgGradient = mode === 'children_book'
     ? 'from-emerald-500/10 to-teal-500/10'
@@ -111,4 +110,6 @@ export const ScriptDisplay: React.FC<ScriptDisplayProps> = ({ items, currentInde
       })}
     </div>
   );
-};
+});
+
+ScriptDisplay.displayName = 'ScriptDisplay';

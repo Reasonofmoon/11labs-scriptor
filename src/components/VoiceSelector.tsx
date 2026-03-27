@@ -23,7 +23,7 @@ interface VoiceSelectorProps {
   className?: string;
 }
 
-export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ 
+export const VoiceSelector = React.memo<VoiceSelectorProps>(({
   selectedVoiceId, 
   onVoiceSelect,
   selectedModelId,
@@ -116,4 +116,6 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       </div>
     </div>
   );
-};
+});
+
+VoiceSelector.displayName = 'VoiceSelector';
