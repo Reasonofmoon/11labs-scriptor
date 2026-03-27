@@ -1,0 +1,22 @@
+
+> readmaster-ai@0.1.0 dev
+> next dev
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.4 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://192.168.0.2:3000
+
+ ✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+ ✓ Ready in 1116ms
+ ○ Compiling / ...
+ GET / 200 in 6.8s (compile: 6.3s, render: 463ms)
+No LLM API keys found on server.
+ POST / 200 in 90ms (compile: 29ms, render: 61ms)
+ELEVENLABS_API_KEY is not configured
+ GET /api/voices 500 in 794ms (compile: 764ms, render: 31ms)
