@@ -9,7 +9,11 @@ interface VisualizerProps {
   analyser?: AnalyserNode | null;
 }
 
-export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyser }) => {
+// Pre-calculate deterministic idle bar heights to fix React 19 purity lint error
+// (Math.random() during render is impure and causes Next.js hydration mismatches)
+const IDLE_BAR_HEIGHTS = [12, 18, 10, 22, 14, 20, 11, 19];
+
+export const Visualizer: React.FC<VisualizerProps> = React.memo(({ isPlaying, mode, analyser }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const primaryColor = mode === 'children_book' ? '#34d399' : '#fbbf24';
   const secondaryColor = mode === 'children_book' ? '#14b8a6' : '#f59e0b';
@@ -35,14 +39,20 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       const barWidth = (canvas.width / bufferLength) * 3;
       let x = 0;
 
+      // ⚡ Bolt Performance Optimization:
+      // Create LinearGradient ONCE per frame outside the loop instead of recreating it
+      // for every single frequency bin (bufferLength times per frame).
+      // A single gradient from top to bottom of canvas is clipped automatically by fillRect.
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, primaryColor);
+      gradient.addColorStop(1, secondaryColor);
+      ctx.fillStyle = gradient;
+
       for (let i = 0; i < bufferLength; i++) {
+        // Stop calculating and drawing if we've exceeded canvas bounds
+        if (x > canvas.width) break;
+
         const barHeight = (dataArray[i] / 255) * canvas.height;
-
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
-
-        ctx.fillStyle = gradient;
 
         const centerY = canvas.height / 2;
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
@@ -64,11 +74,11 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   if (!isPlaying) {
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
-        {[...Array(8)].map((_, i) => (
+        {IDLE_BAR_HEIGHTS.map((height, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${height}px` }}
           />
         ))}
       </div>
@@ -88,4 +98,6 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       </div>
     </div>
   );
-};
+});
+
+Visualizer.displayName = 'Visualizer';
