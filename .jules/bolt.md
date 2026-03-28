@@ -1,0 +1,3 @@
+## 2024-05-24 - Canvas Animation Performance Optimization
+**Learning:** In React `useEffect` for HTML5 Canvas animations, creating `LinearGradient` objects inside the `requestAnimationFrame` render loop is a major performance bottleneck. Since Web Audio API frequency data is bounded (0-255 in `Uint8Array`), these gradients can be pre-calculated and cached.
+**Action:** When working with Web Audio API frequency visualization, pre-calculate expensive canvas rendering objects (like CanvasGradient) into an array of size 256 outside the animation loop, keying them by the frequency data values (0-255).
