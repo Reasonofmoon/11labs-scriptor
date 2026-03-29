@@ -1,0 +1,3 @@
+## 2024-05-24 - Canvas Optimization in React useEffect
+**Learning:** When pre-calculating canvas optimizations in a React `useEffect` (like pre-computing objects for `0-255` Uint8Array values from Web Audio API), ensure the cache array is initialized strictly *outside* the `requestAnimationFrame` callback. If placed inside, the cache is recreated on every frame, which entirely defeats the optimization and leads to GC thrashing.
+**Action:** Always verify the placement of cache initialization relative to the animation loop in canvas-based React components.
