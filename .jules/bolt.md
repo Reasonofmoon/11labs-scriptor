@@ -1,0 +1,3 @@
+## 2024-05-24 - Pre-calculating Canvas Gradients with Uint8Array
+**Learning:** The Web Audio API frequency data is populated into a `Uint8Array`, which strictly returns integer values from 0 to 255. This bounded, finite range allows for exact pre-calculation and caching of corresponding rendering objects (like `CanvasGradient`), removing the need to recreate these expensive objects on every frame within a 60fps render loop and thus reducing Garbage Collection (GC) pressure.
+**Action:** When working with bounded integer data (like 8-bit audio data) for canvas rendering, always pre-calculate and cache rendering objects in an array keyed by the data values before entering the `requestAnimationFrame` loop.
