@@ -1,0 +1,5 @@
+## 2024-05-24 - HTML5 Canvas & Next.js Hydration Performance Optimization
+
+**Learning:** Recreating `LinearGradient` objects inside a `requestAnimationFrame` loop (60 FPS) is an extremely expensive operation in HTML5 Canvas. Additionally, using impure functions like `Math.random()` during React component rendering, specifically for idle states, leads to Next.js hydration mismatches and violates React's strict purity rules.
+
+**Action:** For HTML5 Canvas animations driven by audio frequency data in React `useEffect`, always pre-calculate and cache expensive objects (like `LinearGradient`) outside the render loop (e.g., using a local cache array keyed by all possible byte values 0-255). Ensure to include bounds checking (e.g. `if (x > canvas.width) break;`) inside drawing loops to prevent unnecessary processing of off-screen elements. Replace `Math.random()` during render with deterministic static constants (e.g., `IDLE_BAR_HEIGHTS`) or move random logic into a `useEffect` to safely handle initial mounting in Next.js apps.
