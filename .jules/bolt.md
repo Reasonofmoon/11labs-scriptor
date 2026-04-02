@@ -1,0 +1,3 @@
+## 2024-05-24 - HTML5 Canvas Render Loop Optimization in React
+**Learning:** In high-FPS React animations (like audio visualizers using Web Audio API), repeatedly calling methods like `ctx.createLinearGradient()` inside the `requestAnimationFrame` loop causes significant garbage collection thrashing. Because frequency data from `AnalyserNode.getByteFrequencyData()` populates a `Uint8Array`, values are strictly integers from 0 to 255.
+**Action:** Use this bounded 0-255 range to pre-calculate and cache all 256 possible `CanvasGradient` objects in a static array *outside* the render loop, completely eliminating object allocation during the frame loop. Also, always add bounds checks (`x > canvas.width`) to break early when rendering off-screen elements.
