@@ -1,0 +1,34 @@
+
+> readmaster-ai@0.1.0 dev
+> next dev
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.4 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://192.168.0.2:3000
+
+ ✓ Starting...
+ ✓ Ready in 1175ms
+ ○ Compiling / ...
+ GET / 200 in 7.2s (compile: 6.8s, render: 449ms)
+ELEVENLABS_API_KEY is not configured
+ GET /api/voices 500 in 617ms (compile: 585ms, render: 32ms)
+ GET / 200 in 86ms (compile: 7ms, render: 78ms)
+ELEVENLABS_API_KEY is not configured
+ GET /api/voices 500 in 15ms (compile: 4ms, render: 11ms)
+No LLM API keys found on server.
+ POST / 200 in 51ms (compile: 6ms, render: 45ms)
+ELEVENLABS_API_KEY is not configured
+ POST /api/generate-audio 500 in 195ms (compile: 186ms, render: 9ms)
+ELEVENLABS_API_KEY is not configured
+ POST /api/generate-audio 500 in 46ms (compile: 15ms, render: 31ms)
+ELEVENLABS_API_KEY is not configured
+ POST /api/generate-audio 500 in 14ms (compile: 4ms, render: 10ms)
+ELEVENLABS_API_KEY is not configured
+ POST /api/generate-audio 500 in 15ms (compile: 6ms, render: 8ms)
+ELEVENLABS_API_KEY is not configured
+ POST /api/generate-audio 500 in 14ms (compile: 4ms, render: 10ms)
+ELEVENLABS_API_KEY is not configured
+ POST /api/generate-audio 500 in 14ms (compile: 4ms, render: 10ms)
+ELEVENLABS_API_KEY is not configured
+ POST /api/generate-audio 500 in 11ms (compile: 3ms, render: 8ms)
