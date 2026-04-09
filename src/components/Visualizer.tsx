@@ -25,6 +25,11 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     const dataArray = new Uint8Array(bufferLength);
     let animationId: number;
 
+    // Cache to store pre-calculated linear gradients for each possible frequency value (0-255).
+    // This avoids recreating gradient objects inside the tight requestAnimationFrame loop,
+    // which significantly reduces garbage collection overhead and improves rendering performance.
+    const gradientCache: (CanvasGradient | null)[] = new Array(256).fill(null);
+
     const draw = () => {
       animationId = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
@@ -36,13 +41,20 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        // Performance optimization: Stop processing if we've rendered past the canvas bounds
+        if (x > canvas.width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        const freqValue = dataArray[i];
+        const barHeight = (freqValue / 255) * canvas.height;
 
-        ctx.fillStyle = gradient;
+        if (!gradientCache[freqValue]) {
+            const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+            gradient.addColorStop(0, primaryColor);
+            gradient.addColorStop(1, secondaryColor);
+            gradientCache[freqValue] = gradient;
+        }
+
+        ctx.fillStyle = gradientCache[freqValue]!;
 
         const centerY = canvas.height / 2;
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
@@ -61,6 +73,10 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     };
   }, [isPlaying, analyser, primaryColor, secondaryColor]);
 
+  // Deterministic idle bar heights to prevent hydration mismatches and adhere to React purity rules.
+  // This replaces the usage of Math.random() during render.
+  const IDLE_BAR_HEIGHTS = [12, 20, 15, 24, 18, 14, 22, 16];
+
   if (!isPlaying) {
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
@@ -68,7 +84,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${IDLE_BAR_HEIGHTS[i % IDLE_BAR_HEIGHTS.length]}px` }}
           />
         ))}
       </div>
