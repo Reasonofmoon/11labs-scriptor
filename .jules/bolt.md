@@ -1,0 +1,3 @@
+## 2025-02-12 - Canvas rendering optimizations
+**Learning:** In HTML5 Canvas rendering within a `requestAnimationFrame` loop, repeatedly creating objects like `LinearGradient` is a major performance bottleneck. Because Web Audio API returns discrete integer values 0-255, we can exactly pre-calculate the gradients. Additionally, using `Math.random()` during React component rendering violates strict React purity rules causing lint errors.
+**Action:** Always pre-calculate expensive static objects outside the render loop and cache them using fixed-size arrays based on bounded data ranges (e.g., 256 for byte arrays). When needing "random" heights for idle states, use a constant array initialized outside the component to guarantee deterministic renders.
