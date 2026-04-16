@@ -1,0 +1,3 @@
+## 2024-05-18 - Canvas Rendering Optimization
+**Learning:** In HTML5 Canvas rendering for audio visualization, creating `CanvasGradient` objects inside the `requestAnimationFrame` loop is an expensive operation. Since the Web Audio API's frequency data (via `Uint8Array`) provides bounded integer values from 0 to 255, we can exactly pre-calculate and cache the corresponding `CanvasGradient` objects outside the render loop, drastically reducing the per-frame overhead.
+**Action:** When implementing audio visualization loops, always look for opportunities to pre-calculate graphics objects based on fixed/bounded data ranges. Also, use bounds checking (e.g., `if (x > canvas.width) break;`) to avoid processing off-screen elements.
