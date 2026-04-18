@@ -1,0 +1,3 @@
+## 2024-06-25 - Canvas Animation Optimization
+**Learning:** Instantiating `CanvasGradient` objects inside a `requestAnimationFrame` loop per frame per audio bar causes significant garbage collection overhead and frame drops. Since Web Audio API frequency data is bounded to 0-255 (Uint8Array), these gradients can be completely pre-calculated. Additionally, `Math.random()` inside a functional React component causes hydration mismatches and violates strict mode purity rules.
+**Action:** When implementing Canvas visualizations tied to Web Audio API, always pre-calculate rendering objects keyed by the finite 0-255 frequency values outside the render loop. Use static data arrays instead of `Math.random()` for idle state rendering.
