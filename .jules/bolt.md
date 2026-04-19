@@ -1,0 +1,3 @@
+## 2025-02-24 - HTML5 Canvas Rendering Optimization with Bounded Data Ranges
+**Learning:** In Next.js/React when using the Web Audio API with HTML5 Canvas, the frequency data fetched into a `Uint8Array` guarantees integer values strictly between 0 and 255. Re-creating `CanvasGradient` objects inside a high-frequency `requestAnimationFrame` loop (60+ times per second per bar) causes significant unnecessary memory allocation and garbage collection churn.
+**Action:** Always check the data range of the inputs driving the visualizer. Since the frequency value is bounded and integer, you can pre-calculate all 256 possible `CanvasGradient` objects in the `useEffect` closure outside of the render loop and cache them in an array, performing an O(1) lookup during drawing.
