@@ -1,0 +1,3 @@
+## 2024-05-24 - Canvas LinearGradient caching in React requestAnimationFrame
+**Learning:** Calling `ctx.createLinearGradient` hundreds of times inside a `requestAnimationFrame` loop creates massive garbage collection pressure and CPU overhead. Since the Web Audio API `Uint8Array` limits frequency data to 256 discrete values (0-255), we can pre-calculate and cache exactly 256 CanvasGradient objects outside the render loop in `useEffect`.
+**Action:** Always map bounded numeric inputs (like 8-bit audio data) to pre-calculated rendering assets (gradients, paths, colors) in Canvas animations to eliminate expensive instantiation within `requestAnimationFrame`.
