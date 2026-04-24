@@ -1,0 +1,4 @@
+
+## 2024-05-18 - Pre-calculating Canvas Gradients outside of requestAnimationFrame
+**Learning:** In Web Audio API visualization loops (`requestAnimationFrame`), repeatedly creating `CanvasGradient` objects (`ctx.createLinearGradient()`) for each frequency bin on every frame is a significant performance bottleneck. Because the Web Audio `Uint8Array` natively bounds values between 0 and 255, we can compute exactly 256 possible bar heights and completely pre-calculate their corresponding gradients outside the render loop, reducing thousands of object allocations per second to a single lookup array.
+**Action:** Always inspect HTML5 Canvas draw loops for object instantiations (`createLinearGradient`, `createPattern`, etc). If the input data has a fixed bound (like `Uint8Array`'s 0-255), pre-calculate and cache these objects outside the render loop before starting the animation.
