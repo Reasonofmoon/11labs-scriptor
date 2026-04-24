@@ -9,7 +9,11 @@ interface VisualizerProps {
   analyser?: AnalyserNode | null;
 }
 
-export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyser }) => {
+// Pre-calculate deterministic random heights for idle state to avoid hydration mismatches
+// and the 'react-hooks/purity' linting error for using Math.random() in render.
+const IDLE_BAR_HEIGHTS = [14.2, 21.5, 9.8, 18.1, 11.4, 23.9, 16.7, 10.3];
+
+export const Visualizer: React.FC<VisualizerProps> = React.memo(({ isPlaying, mode, analyser }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const primaryColor = mode === 'children_book' ? '#34d399' : '#fbbf24';
   const secondaryColor = mode === 'children_book' ? '#14b8a6' : '#f59e0b';
@@ -25,6 +29,22 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     const dataArray = new Uint8Array(bufferLength);
     let animationId: number;
 
+    // PERFORMANCE: Pre-calculate the 256 possible gradients outside the render loop
+    // Since Uint8Array only returns 0-255, we can cache all possible bar heights & gradients
+    // rather than instantiating thousands of CanvasGradient objects per second.
+    const gradientCache = new Array(256);
+    for (let i = 0; i < 256; i++) {
+      const barHeight = (i / 255) * canvas.height;
+      if (barHeight > 0) {
+        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+        gradient.addColorStop(0, primaryColor);
+        gradient.addColorStop(1, secondaryColor);
+        gradientCache[i] = gradient;
+      } else {
+        gradientCache[i] = primaryColor; // fallback for 0 height
+      }
+    }
+
     const draw = () => {
       animationId = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
@@ -34,17 +54,17 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
 
       const barWidth = (canvas.width / bufferLength) * 3;
       let x = 0;
+      const centerY = canvas.height / 2;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        // PERFORMANCE: Stop drawing if we've gone past the right edge of the canvas
+        if (x > canvas.width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        const val = dataArray[i];
+        const barHeight = (val / 255) * canvas.height;
 
-        ctx.fillStyle = gradient;
-
-        const centerY = canvas.height / 2;
+        // Use the pre-calculated gradient
+        ctx.fillStyle = gradientCache[val];
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
 
         x += barWidth;
@@ -64,11 +84,11 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   if (!isPlaying) {
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
-        {[...Array(8)].map((_, i) => (
+        {IDLE_BAR_HEIGHTS.map((height, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${height}px` }}
           />
         ))}
       </div>
@@ -88,4 +108,6 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       </div>
     </div>
   );
-};
+});
+
+Visualizer.displayName = 'Visualizer';
