@@ -1,0 +1,3 @@
+## 2025-04-29 - Web Audio API Fast Caching
+**Learning:** Web Audio API frequency data (0-255) permits exact pre-calculation and caching of rendering objects like CanvasGradient outside the `requestAnimationFrame` loop, avoiding huge amounts of garbage collection overhead.
+**Action:** When implementing visualizers, iterate 0-255 outside the render loop and pre-create an array of objects to reuse during animation, reducing ~60k object creations per second to 0.
