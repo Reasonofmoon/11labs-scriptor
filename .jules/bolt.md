@@ -1,0 +1,3 @@
+## 2025-02-24 - Pre-calculating Web Audio API Render Objects
+**Learning:** Web Audio API frequency data `Uint8Array` strictly returns bounded integers (0-255). This small, deterministic range allows creating a complete local cache array of expensive canvas rendering objects (like `CanvasGradient`) keyed by data values, avoiding recreation inside the `requestAnimationFrame` loop.
+**Action:** When working with frequency data on Canvas, pre-calculate gradients and color stops outside the render loop based on the 0-255 index. Ensure the cache array is initialized strictly outside the frame callback.
