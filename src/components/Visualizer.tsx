@@ -24,6 +24,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     let animationId: number;
+    const gradientCache: CanvasGradient[] = new Array(256);
 
     const draw = () => {
       animationId = requestAnimationFrame(draw);
@@ -36,13 +37,19 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        if (x > canvas.width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        const val = dataArray[i];
+        const barHeight = (val / 255) * canvas.height;
 
-        ctx.fillStyle = gradient;
+        if (!gradientCache[val]) {
+          const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+          gradient.addColorStop(0, primaryColor);
+          gradient.addColorStop(1, secondaryColor);
+          gradientCache[val] = gradient;
+        }
+
+        ctx.fillStyle = gradientCache[val];
 
         const centerY = canvas.height / 2;
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
@@ -62,13 +69,14 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   }, [isPlaying, analyser, primaryColor, secondaryColor]);
 
   if (!isPlaying) {
+    const IDLE_BAR_HEIGHTS = [12, 20, 15, 24, 18, 14, 22, 16];
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${IDLE_BAR_HEIGHTS[i % IDLE_BAR_HEIGHTS.length]}px` }}
           />
         ))}
       </div>
