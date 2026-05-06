@@ -1,0 +1,3 @@
+## 2024-05-06 - [Canvas Optimization with Discrete Values]
+**Learning:** Web Audio API frequency data is bounded (Uint8Array, 0-255). We can pre-calculate and cache CanvasGradient objects for these exact 256 states outside the render loop instead of creating them 128+ times per frame.
+**Action:** Always check the bounds of data sources driving Canvas animations. If discrete and bounded, cache expensive rendering objects (like gradients) based on data values instead of calculating them on the fly.
