@@ -1,0 +1,3 @@
+## 2024-05-24 - Pre-calculate Canvas Gradients
+**Learning:** In HTML5 Canvas rendering within React, creating expensive objects like `LinearGradient` inside a `requestAnimationFrame` loop (especially nested in frequency bin loops) causes significant garbage collection overhead and frame drops. Web Audio API's frequency data (`Uint8Array`) strictly bounds values between 0 and 255, providing a perfect finite domain for caching.
+**Action:** When rendering audio frequency visualizations, always pre-calculate visual objects (like gradients or colors) keyed by the 256 possible integer values strictly outside the animation loop, and look them up during rendering.
