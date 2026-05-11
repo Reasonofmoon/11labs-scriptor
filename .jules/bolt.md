@@ -1,0 +1,3 @@
+## 2024-05-18 - Optimize HTML5 Canvas Gradient Rendering
+**Learning:** For HTML5 Canvas animations in React `useEffect`, expensive objects (like `LinearGradient`) created on every frame within `requestAnimationFrame` cause significant overhead. In Web Audio API applications where frequency bins strictly range from 0-255, we can pre-calculate and cache all possible rendering permutations. Also, `Math.random()` inside React component render logic can cause Next.js hydration mismatches; fixed with static arrays.
+**Action:** When working with canvas animations, extract expensive operations (like gradients or static styling) outside the render loop and use bounded ranges (like 0-255) to cache values.
