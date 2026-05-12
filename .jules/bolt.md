@@ -1,0 +1,4 @@
+## 2026-05-12 - Pre-calculate Canvas Rendering Objects
+**Learning:** Web Audio API frequency data `Uint8Array` strictly returns bounded integer values (0-255). We can leverage this fixed range to pre-calculate and cache rendering objects (like `CanvasGradient`) into a 256-length array outside of the `requestAnimationFrame` drawing loop, preventing unnecessary recreation of these objects 60 times a second. Additionally, using `Math.random()` inside React render cycles or for visual states (like idle visualizer bars) causes Next.js hydration mismatches between the server and client.
+
+**Action:** For HTML5 Canvas animations in React `useEffect`, always pre-calculate expensive objects (like `LinearGradient`) outside the render loop using a local cache array keyed by data values when the data range is fixed and bounded. Replace `Math.random()` in initial renders with deterministic constant arrays to prevent hydration mismatches.
