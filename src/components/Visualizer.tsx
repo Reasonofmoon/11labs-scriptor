@@ -9,6 +9,8 @@ interface VisualizerProps {
   analyser?: AnalyserNode | null;
 }
 
+const IDLE_HEIGHTS = [14, 20, 12, 22, 16, 24, 18, 15];
+
 export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyser }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const primaryColor = mode === 'children_book' ? '#34d399' : '#fbbf24';
@@ -20,6 +22,16 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Pre-calculate linear gradients since dataArray holds values 0-255
+    const gradientCache = new Array<CanvasGradient>(256);
+    for (let i = 0; i <= 255; i++) {
+      const barHeight = (i / 255) * canvas.height;
+      const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+      gradient.addColorStop(0, primaryColor);
+      gradient.addColorStop(1, secondaryColor);
+      gradientCache[i] = gradient;
+    }
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
@@ -36,13 +48,12 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        if (x > canvas.width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        const value = dataArray[i];
+        const barHeight = (value / 255) * canvas.height;
 
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = gradientCache[value];
 
         const centerY = canvas.height / 2;
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
@@ -68,7 +79,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${IDLE_HEIGHTS[i]}px` }}
           />
         ))}
       </div>
