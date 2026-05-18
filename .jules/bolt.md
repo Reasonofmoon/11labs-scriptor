@@ -1,0 +1,4 @@
+
+## 2024-05-18 - Canvas Render Loop Memory Leak Optimization
+**Learning:** HTML5 Canvas `createLinearGradient` is highly expensive to recreate every frame (e.g. inside `requestAnimationFrame`) since Web Audio API analyser bounded range is always 0-255. Also, the `Visualizer` loop iterating over the full `bufferLength` when rendering bars can exceed canvas width, causing unnecessary draw calls. Finally, using `Math.random()` in React render outputs causes hydration mismatch between Next.js SSR and client.
+**Action:** Pre-calculate 256 CanvasGradient objects in a cache strictly outside the loop. Add early breaks when `x > canvas.width`. Never use `Math.random()` for visual states; use deterministic static arrays instead. Always fallback zero-height gradients to `1` to avoid DOMException finite coordinate errors.
