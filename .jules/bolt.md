@@ -1,0 +1,3 @@
+## 2026-05-21 - [Canvas Web Audio Performance]
+**Learning:** Web Audio API frequency data (`Uint8Array`) has a bounded range (0-255), allowing O(1) rendering cache lookups for Canvas gradients, eliminating the need to create new gradients on every frame.
+**Action:** When pre-calculating canvas optimizations in a React `useEffect`, ensure the cache array is initialized strictly outside the `requestAnimationFrame` callback to prevent recreating the cache on every frame, and handle zero-height edge cases (e.g., `Math.max(1, height)`).
