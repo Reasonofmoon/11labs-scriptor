@@ -25,6 +25,10 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     const dataArray = new Uint8Array(bufferLength);
     let animationId: number;
 
+    // Performance optimization: Pre-calculate gradients based on the 0-255 bounds
+    // of Web Audio API Uint8Array. Initialized strictly outside requestAnimationFrame.
+    const gradientCache: (CanvasGradient | null)[] = new Array(256).fill(null);
+
     const draw = () => {
       animationId = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
@@ -36,11 +40,19 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        if (x > canvas.width) break; // Short-circuit: don't render off-screen
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        const value = dataArray[i]; // Bounded integer 0-255
+        const barHeight = (value / 255) * canvas.height;
+
+        let gradient = gradientCache[value];
+        if (!gradient) {
+          // Calculate and cache handling zero-height bounds
+          gradient = ctx.createLinearGradient(0, canvas.height - Math.max(1, barHeight), 0, canvas.height);
+          gradient.addColorStop(0, primaryColor);
+          gradient.addColorStop(1, secondaryColor);
+          gradientCache[value] = gradient;
+        }
 
         ctx.fillStyle = gradient;
 
@@ -62,13 +74,14 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   }, [isPlaying, analyser, primaryColor, secondaryColor]);
 
   if (!isPlaying) {
+    const idleHeights = [14, 22, 11, 18, 16, 20, 12, 19];
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
-        {[...Array(8)].map((_, i) => (
+        {idleHeights.map((h, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${h}px` }}
           />
         ))}
       </div>
