@@ -1,0 +1,3 @@
+## 2026-05-26 - Pre-calculate Web Audio API Canvas Gradients
+**Learning:** Web Audio API frequency data is populated into a `Uint8Array`, bounding values strictly between 0 and 255. In Canvas rendering loops iterating over this data, creating new `CanvasGradient` objects on every frame (e.g., 60fps) causes high object allocation and GC pressure.
+**Action:** When visualizing Web Audio API data, pre-calculate and cache rendering objects (like gradients) based on the bounded 0-255 range inside the setup effect. Also, always add bounds checking (`if (x > canvas.width) break;`) to short-circuit rendering off-screen elements.
