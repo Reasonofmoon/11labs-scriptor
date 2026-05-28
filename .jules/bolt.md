@@ -1,0 +1,3 @@
+## 2024-05-28 - [Visualizer Render Loop GC Pressure & Hydration Optimization]
+**Learning:** Instantiating new objects (like `ctx.createLinearGradient`) within a high-frequency `requestAnimationFrame` loop creates significant Garbage Collection pressure in HTML5 Canvas. Additionally, dynamic values like `Math.random()` in React render outputs cause Next.js hydration mismatches between client and server.
+**Action:** When rendering Canvas elements based on Web Audio API data, precalculate mapping caches (e.g., gradients for each of the 256 possible `Uint8Array` byte values) outside the animation loop. Always use deterministic arrays or seeded generators for visual variations in React components to ensure hydration safety.
