@@ -14,6 +14,9 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   const primaryColor = mode === 'children_book' ? '#34d399' : '#fbbf24';
   const secondaryColor = mode === 'children_book' ? '#14b8a6' : '#f59e0b';
 
+  // Deterministic array to replace Math.random() and avoid Next.js hydration mismatches
+  const [idleHeights] = React.useState([12, 20, 16, 22, 10, 24, 18, 14]);
+
   useEffect(() => {
     if (!isPlaying || !analyser || !canvasRef.current) return;
 
@@ -24,6 +27,18 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     let animationId: number;
+
+    // Pre-calculate gradient objects outside the rendering loop to reduce GC pressure
+    // Web Audio frequency data is always returned in a Uint8Array (0-255)
+    const gradientCache: CanvasGradient[] = new Array(256);
+    for (let i = 0; i < 256; i++) {
+      const barHeight = (i / 255) * canvas.height;
+      // Handle zero height edge case to avoid non-finite coordinate DOMException
+      const gradient = ctx.createLinearGradient(0, canvas.height - (barHeight || 1), 0, canvas.height);
+      gradient.addColorStop(0, primaryColor);
+      gradient.addColorStop(1, secondaryColor);
+      gradientCache[i] = gradient;
+    }
 
     const draw = () => {
       animationId = requestAnimationFrame(draw);
@@ -36,13 +51,13 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        // Short-circuit to avoid calculating and rendering off-screen elements
+        if (x > canvas.width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        const val = dataArray[i];
+        const barHeight = (val / 255) * canvas.height;
 
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = gradientCache[val];
 
         const centerY = canvas.height / 2;
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
@@ -64,11 +79,11 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   if (!isPlaying) {
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
-        {[...Array(8)].map((_, i) => (
+        {idleHeights.map((h, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${h}px` }}
           />
         ))}
       </div>
