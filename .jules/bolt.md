@@ -1,0 +1,3 @@
+## 2024-11-20 - Pre-calculating Bounded Canvas Values
+**Learning:** In Web Audio API visualizers, `getByteFrequencyData` strictly returns integers between 0 and 255. Dynamically recreating objects like `CanvasGradient` in a 60fps loop causes high GC pressure and massive object allocation (~61k objects/sec). Also, rendering loops iterate over full frequency arrays even if `x` exceeds `canvas.width`.
+**Action:** Always pre-calculate and cache expensive Canvas objects bounded by frequency data (0-255). Add short-circuit breaks (`if (x > canvas.width) break;`) to skip rendering off-screen elements. Handled `Math.random()` causing Next.js hydration mismatches by replacing with deterministic values.
