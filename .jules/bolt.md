@@ -1,0 +1,3 @@
+## 2024-06-05 - Canvas Rendering Gradient Caching and Math.random() Hydration
+**Learning:** In Web Audio API visualizers using `requestAnimationFrame`, continuously re-creating `CanvasGradient` objects per frame based on buffer length can lead to massive Garbage Collection (GC) pauses during rendering (up to 60k objects/sec). Also, using `Math.random()` inside React render cycles for visual states (like idle bars) causes Next.js server/client hydration mismatches.
+**Action:** When working with Canvas gradients bound to `Uint8Array` Web Audio data (0-255), pre-calculate and cache the 256 possible gradients outside the render loop. Always use deterministic, static arrays instead of `Math.random()` for initial React UI states to ensure smooth Next.js hydration.
