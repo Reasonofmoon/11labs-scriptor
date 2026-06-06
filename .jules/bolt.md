@@ -1,0 +1,3 @@
+## 2024-06-06 - Pre-calculate Web Audio CanvasGradients
+**Learning:** Web Audio API frequency data is populated into a `Uint8Array`, strictly returning integer values from 0 to 255. This bounded range allows for exact pre-calculation and caching of corresponding rendering objects (like CanvasGradient) to avoid high object allocation and Garbage Collection (GC) pressure inside `requestAnimationFrame`.
+**Action:** When rendering visualizers from Web Audio frequency data, identify opportunities to pre-calculate rendering resources mapped to the 0-255 bounds instead of creating them dynamically per-frame.
