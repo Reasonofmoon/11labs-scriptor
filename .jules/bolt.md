@@ -1,0 +1,3 @@
+## 2024-06-25 - Pre-calculating Canvas Objects from Bounded Audio Data
+**Learning:** In high-frequency 60fps React Canvas rendering loops (like audio visualization), creating new objects (e.g., `CanvasGradient`) inside `requestAnimationFrame` creates massive Garbage Collection (GC) pressure, leading to stuttering. Web Audio API's `getByteFrequencyData` populates a `Uint8Array` bounded strictly to integers `0-255`.
+**Action:** Always pre-calculate and cache expensive rendering objects outside the render loop when the input domain is small and bounded (like 0-255). Array indices directly mapping to byte values (`gradientCache[val]`) provide O(1) lookup with zero allocations per frame.
