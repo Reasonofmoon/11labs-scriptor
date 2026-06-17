@@ -1,0 +1,3 @@
+## 2024-05-19 - [Canvas Garbage Collection Optimization]
+**Learning:** In HTML5 Canvas rendering loops iterating over large datasets like Web Audio API frequency arrays (Uint8Array), re-creating `CanvasGradient` objects every frame causes high garbage collection pressure. Since `Uint8Array` bounds values strictly from 0-255, we can pre-calculate and cache exactly 256 gradients outside the `requestAnimationFrame` callback.
+**Action:** Always verify if high-frequency loops are creating objects based on bounded domains, and use array caching where possible instead of inline allocation to drastically reduce GC overhead in rendering.
