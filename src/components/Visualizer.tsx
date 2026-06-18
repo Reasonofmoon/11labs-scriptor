@@ -36,9 +36,16 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        // ⚡ Bolt: Short-circuit rendering if we are off the right side of the canvas
+        if (x > canvas.width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+        const val = dataArray[i];
+        const barHeight = (val / 255) * canvas.height;
+
+        // ⚡ Bolt: Move gradient creation into draw loop but use it correctly for responsive sizing
+        // Reverting the gradient cache because it breaks on responsive resize when canvas.height changes.
+        // Instead, we just keep the fast Math.max edge case handler.
+        const gradient = ctx.createLinearGradient(0, canvas.height - Math.max(1, barHeight), 0, canvas.height);
         gradient.addColorStop(0, primaryColor);
         gradient.addColorStop(1, secondaryColor);
 
@@ -62,13 +69,15 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   }, [isPlaying, analyser, primaryColor, secondaryColor]);
 
   if (!isPlaying) {
+    // ⚡ Bolt: Pre-calculated heights avoid Next.js server/client hydration mismatch caused by Math.random()
+    const heights = [12, 18, 14, 22, 16, 20, 10, 15];
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
-        {[...Array(8)].map((_, i) => (
+        {heights.map((h, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${h}px` }}
           />
         ))}
       </div>

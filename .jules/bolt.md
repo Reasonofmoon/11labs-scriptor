@@ -1,0 +1,7 @@
+## 2025-06-18 - CanvasGradient Pre-calculation vs Responsive Resize
+**Learning:** While pre-calculating CanvasGradient objects based on Web Audio API `Uint8Array` bounds (0-255) reduces GC pressure, caching them once on `useEffect` mount causes visual regressions on window resize. The cached gradients retain the old `canvas.height`, breaking rendering when the canvas dimension changes responsively.
+**Action:** Reverted the gradient cache optimization. When optimizing canvas rendering loops, ensure cached spatial objects (like gradients) react to resize events (e.g., via ResizeObserver or invalidating cache on dimension change), or use scalable alternative approaches. Kept the short-circuit condition `if (x > canvas.width) break;` for off-screen culling.
+
+## 2025-06-18 - Deterministic UI vs Next.js Hydration
+**Learning:** Using `Math.random()` to generate visual states (like varying heights for an idle visualizer bar) directly in a React render cycle causes a Next.js server/client hydration mismatch error because the server and client will generate different random values.
+**Action:** Replace `Math.random()` in Next.js JSX render blocks with fixed, deterministic constant arrays, or move random generation strictly into `useEffect` hooks.
