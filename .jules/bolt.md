@@ -1,0 +1,3 @@
+## 2024-03-24 - Web Audio API Canvas rendering bottlenecks
+**Learning:** In HTML5 Canvas rendering loops iterating over large datasets (like `Uint8Array` of audio frequency data from `AnalyserNode`), recreating objects like `CanvasGradient` dynamically per frame (inside `requestAnimationFrame`) based on bounded frequency values (0-255) leads to high object allocation and Garbage Collection (GC) pressure.
+**Action:** Always pre-calculate and cache rendering objects for bounded Web Audio API frequency values (0-255) outside the render loop (`requestAnimationFrame`). Also add a short-circuit break condition (`if (x > canvas.width) break;`) to skip rendering off-screen elements. Handle zero-height edge cases when creating pre-calculated gradients to avoid `DOMException`.
