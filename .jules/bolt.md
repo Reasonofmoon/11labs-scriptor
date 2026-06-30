@@ -1,0 +1,3 @@
+## 2024-05-18 - Visualizer Canvas Rendering and Hydration Issue Fix
+**Learning:** Hydration errors in Next.js can be tricky when related to randomized visual states (e.g. idle visualizer). Math.random() inside components causes issues on rehydration. Secondly, iterating over the full Web Audio Uint8Array with canvas drawing in an unoptimized way can cause massive GC pressure and poor performance. Web Audio API frequency limits values exactly from 0-255.
+**Action:** Replace `Math.random()` with deterministic structures, and cache fixed-range gradient objects before rendering arrays in canvas animations, instead of recreating gradients repeatedly within the render frame. Short circuit loop conditions based on canvas geometry to skip drawing invisible bars.
