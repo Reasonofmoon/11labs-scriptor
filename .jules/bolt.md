@@ -1,0 +1,3 @@
+## 2024-05-24 - HTML5 Canvas Optimization with Web Audio API
+**Learning:** Web Audio API frequency data populated into a `Uint8Array` strictly returns bounded integer values from 0 to 255. Instead of dynamically creating `CanvasGradient` objects dynamically in a 60fps rendering loop based on the frequency values, it's possible to pre-calculate and cache all 256 possible gradient outcomes.
+**Action:** When working with rendering loops and bounded value arrays (like Web Audio API `Uint8Array`), check if rendering objects (like CanvasGradients or path objects) can be deterministically mapped and pre-cached outside the animation frame loop to avoid excessive Garbage Collection pressure and performance degradation.
