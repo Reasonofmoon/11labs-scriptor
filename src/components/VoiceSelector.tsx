@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { QUALITY_PRESETS } from '@/lib/tts';
 
 interface Voice {
   voice_id: string;
@@ -23,24 +24,18 @@ interface VoiceSelectorProps {
   className?: string;
 }
 
-export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ 
-  selectedVoiceId, 
+const EXPIRING_CATEGORIES = new Set(['premade']);
+
+export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
+  selectedVoiceId,
   onVoiceSelect,
   selectedModelId,
   onModelSelect,
-  className 
+  className,
 }) => {
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const models = [
-    { id: 'eleven_v3', name: 'Eleven v3 (Flagship, Most Expressive)' },
-    { id: 'eleven_turbo_v2_5', name: 'Turbo v2.5 (Fastest, Multilingual)' },
-    { id: 'eleven_flash_v2_5', name: 'Flash v2.5 (Ultra-low Latency)' },
-    { id: 'eleven_multilingual_v2', name: 'Multilingual v2 (Legacy High Quality)' },
-    { id: 'eleven_monolingual_v1', name: 'English v1 (Legacy)' },
-  ];
 
   useEffect(() => {
     const fetchVoices = async () => {
@@ -78,6 +73,9 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     );
   }
 
+  const lastingVoices = voices.filter((voice) => !EXPIRING_CATEGORIES.has(voice.category));
+  const expiringVoices = voices.filter((voice) => EXPIRING_CATEGORIES.has(voice.category));
+
   return (
     <div className={`space-y-4 ${className}`}>
       <div>
@@ -89,10 +87,19 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           onChange={(e) => onVoiceSelect(e.target.value)}
           className="w-full bg-slate-800/70 border-2 border-slate-600 hover:border-emerald-500/50 text-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22rgb(148%20163%20184)%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3e%3cpolyline%20points=%226%209%2012%2015%2018%209%22%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:20px] bg-[right_12px_center] bg-no-repeat pr-10"
         >
-          <option value="">🎯 Default Voice (Recommended)</option>
-          {voices.map((voice) => (
+          <option value="">🎯 Default persona (Minhee / Dal)</option>
+          {lastingVoices.map((voice) => (
             <option key={voice.voice_id} value={voice.voice_id}>
-              {voice.name} {voice.labels?.accent ? `• ${voice.labels.accent}` : ''} {voice.labels?.gender ? `• ${voice.labels.gender}` : ''}
+              {voice.name}
+              {voice.labels?.accent ? ` • ${voice.labels.accent}` : ''}
+              {voice.labels?.gender ? ` • ${voice.labels.gender}` : ''}
+            </option>
+          ))}
+          {expiringVoices.map((voice) => (
+            <option key={voice.voice_id} value={voice.voice_id}>
+              {voice.name}
+              {voice.labels?.accent ? ` • ${voice.labels.accent}` : ''}
+              {' • expires Dec 2026'}
             </option>
           ))}
         </select>
@@ -100,16 +107,16 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
       <div>
         <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-2">
-          <span>⚡</span> AI Model
+          <span>⚡</span> Quality
         </label>
         <select
           value={selectedModelId}
           onChange={(e) => onModelSelect(e.target.value)}
           className="w-full bg-slate-800/70 border-2 border-slate-600 hover:border-amber-500/50 text-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22rgb(148%20163%20184)%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3e%3cpolyline%20points=%226%209%2012%2015%2018%209%22%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:20px] bg-[right_12px_center] bg-no-repeat pr-10"
         >
-          {models.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.name}
+          {QUALITY_PRESETS.map((preset) => (
+            <option key={preset.modelId} value={preset.modelId}>
+              {preset.name} — {preset.hint}
             </option>
           ))}
         </select>

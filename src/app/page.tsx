@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mode, DifficultyLevel, ProblemType, ScriptItem } from '@/lib/types';
+import { Mode, DifficultyLevel, ProblemType, PROBLEM_TYPES, ScriptItem } from '@/lib/types';
 import { generateScript } from '@/lib/script-generator';
 import { AudioSequencer, AudioSequencerRef } from '@/components/AudioSequencer';
 import { Visualizer } from '@/components/Visualizer';
 import { ScriptDisplay } from '@/components/ScriptDisplay';
 import { BookOpen, GraduationCap, Sparkles, BrainCircuit, Sun, Moon, Download, FileText, FileJson, FileAudio } from 'lucide-react';
 import { VoiceSelector } from '@/components/VoiceSelector';
-import { downloadScriptAsJson, downloadScriptAsText, generateAndDownloadSrt } from '@/lib/export-utils';
+import { downloadScriptAsJson, downloadScriptAsText, generateAndDownloadSrt, generateAndDownloadMix } from '@/lib/export-utils';
+import { DEFAULT_MODEL_BY_MODE } from '@/lib/tts';
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>('children_book');
@@ -23,13 +24,17 @@ export default function Home() {
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
-  const [selectedModelId, setSelectedModelId] = useState<string>('eleven_turbo_v2_5');
+  const [selectedModelId, setSelectedModelId] = useState<string>(DEFAULT_MODEL_BY_MODE.children_book);
   
   const sequencerRef = React.useRef<AudioSequencerRef>(null);
 
   React.useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
+
+  React.useEffect(() => {
+    setSelectedModelId(DEFAULT_MODEL_BY_MODE[mode]);
+  }, [mode]);
 
   const handleGenerate = async () => {
     if (!inputText.trim()) return;
@@ -60,6 +65,17 @@ export default function Home() {
     } catch (error) {
       console.error('Failed to export SRT:', error);
       alert('Failed to export SRT. Please try again.');
+    }
+  };
+
+  const handleDownloadMix = async () => {
+    if (!sequencerRef.current) return;
+    try {
+      const blobs = await sequencerRef.current.fetchAllAudio();
+      await generateAndDownloadMix(scriptItems, blobs);
+    } catch (error) {
+      console.error('Failed to export mix:', error);
+      alert('Failed to export audio mix. Please try again.');
     }
   };
 
@@ -154,15 +170,28 @@ export default function Home() {
                   </div>
                   Input Text
                 </label>
-                <select
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value as DifficultyLevel)}
-                  className={`${isDarkMode ? 'bg-slate-800 border-slate-600 text-slate-200' : 'bg-white border-slate-300 text-slate-900'} border-2 rounded-xl px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-${themeColor}-500 transition-all cursor-pointer hover:border-${themeColor}-400`}
-                >
-                  <option value="Beginner">🟢 Beginner</option>
-                  <option value="Intermediate">🟡 Intermediate</option>
-                  <option value="Advanced">🔴 Advanced</option>
-                </select>
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <select
+                    value={level}
+                    onChange={(e) => setLevel(e.target.value as DifficultyLevel)}
+                    className={`${isDarkMode ? 'bg-slate-800 border-slate-600 text-slate-200' : 'bg-white border-slate-300 text-slate-900'} border-2 rounded-xl px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-${themeColor}-500 transition-all cursor-pointer hover:border-${themeColor}-400`}
+                  >
+                    <option value="Beginner">🟢 Beginner</option>
+                    <option value="Intermediate">🟡 Intermediate</option>
+                    <option value="Advanced">🔴 Advanced</option>
+                  </select>
+                  {mode === 'exam_passage' && (
+                    <select
+                      value={problemType}
+                      onChange={(e) => setProblemType(e.target.value as ProblemType)}
+                      className={`${isDarkMode ? 'bg-slate-800 border-slate-600 text-slate-200' : 'bg-white border-slate-300 text-slate-900'} border-2 rounded-xl px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-${themeColor}-500 transition-all cursor-pointer hover:border-${themeColor}-400`}
+                    >
+                      {PROBLEM_TYPES.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
 
               <div className="mb-6">
@@ -243,7 +272,7 @@ export default function Home() {
                   onAnalyserReady={setAnalyser}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
                   <button
                     onClick={handleDownloadText}
                     className={`flex items-center justify-center gap-2 px-4 py-3 ${isDarkMode ? 'bg-slate-800 hover:bg-slate-700 border-slate-700' : 'bg-white hover:bg-slate-50 border-slate-200'} border-2 rounded-xl text-sm font-semibold transition-all transform hover:scale-105 hover:shadow-lg`}
@@ -261,6 +290,12 @@ export default function Home() {
                     className={`flex items-center justify-center gap-2 px-4 py-3 ${isDarkMode ? 'bg-slate-800 hover:bg-slate-700 border-slate-700' : 'bg-white hover:bg-slate-50 border-slate-200'} border-2 rounded-xl text-sm font-semibold transition-all transform hover:scale-105 hover:shadow-lg`}
                   >
                     <FileAudio size={18} /> Export SRT
+                  </button>
+                  <button
+                    onClick={handleDownloadMix}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 ${isDarkMode ? 'bg-slate-800 hover:bg-slate-700 border-slate-700' : 'bg-white hover:bg-slate-50 border-slate-200'} border-2 rounded-xl text-sm font-semibold transition-all transform hover:scale-105 hover:shadow-lg`}
+                  >
+                    <Download size={18} /> Audio (WAV)
                   </button>
                 </div>
               </div>

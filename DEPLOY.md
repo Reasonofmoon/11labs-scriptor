@@ -17,7 +17,9 @@ Add the following variables (copy values from your local `.env.local`):
 
 | Key | Description |
 |-----|-------------|
-| `ELEVENLABS_API_KEY` | Required for audio generation. |
+| `ELEVENLABS_API_KEY` | Required for speech and sound-effect generation. |
+| `ELEVENLABS_VOICE_MINHEE` | Optional. Story Mode default voice ID (replace before Default voices expire 2026-12-31). |
+| `ELEVENLABS_VOICE_DAL` | Optional. Exam Mode default voice ID. |
 | `GOOGLE_GEMINI_API_KEY` | Required for AI script generation (Gemini 2.5 Flash). |
 | `OPENAI_API_KEY` | Optional. Used if Gemini key is missing. |
 

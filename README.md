@@ -30,10 +30,10 @@ LLM이 교육학적으로 구조화된 대본을 생성하고, ElevenLabs의 감
 |---|---|---|---|
 | 텍스트 분석 | -- | LLM 요약 | LLM 시맨틱 청킹 + 대본 생성 |
 | 음성 품질 | 로봇 음성 | 없음 | ElevenLabs 감정 TTS |
-| 효과음(SFX) | -- | -- | 자동 삽입 (마법, 페이지 넘김 등) |
+| 효과음(SFX) | -- | -- | ElevenLabs Sound Effects API (`eleven_text_to_sound_v2`) |
 | 튜터 페르소나 | -- | 범용 챗봇 | 민희쌤(동화) / 달쌤(수능) |
 | 실시간 시각화 | -- | -- | Web Audio API 파형 비주얼라이저 |
-| 내보내기 | 단일 MP3 | -- | TXT / JSON / SRT 자막 |
+| 내보내기 | 단일 MP3 | -- | TXT / JSON / SRT / WAV 믹스 |
 
 ---
 
@@ -118,6 +118,7 @@ flowchart TB
 - **TXT** -- 번호 매긴 대본 텍스트 (인쇄용)
 - **JSON** -- 스크립트 아이템 구조화 데이터 (타 시스템 연동, 2차 가공)
 - **SRT** -- 실제 오디오 길이 기반 타임코드 자막 (영상 편집 소프트웨어 연동)
+- **WAV** -- 음성+SFX를 이어 붙인 전체 믹스 (수업/편집용)
 
 ---
 
@@ -147,7 +148,9 @@ npm run dev
 
 ```bash
 # .env에 LLM API 키 추가 (둘 중 하나만 있어도 동작)
-ELEVENLABS_API_KEY=your_elevenlabs_key     # 필수: TTS 음성 생성
+ELEVENLABS_API_KEY=your_elevenlabs_key     # 필수: TTS + Sound Effects
+ELEVENLABS_VOICE_MINHEE=                   # 선택: Story 기본 보이스 (Default 보이스 2026-12-31 만료)
+ELEVENLABS_VOICE_DAL=                      # 선택: Exam 기본 보이스
 GOOGLE_GEMINI_API_KEY=your_gemini_key      # 권장: Gemini 2.5 Flash AI 대본 생성
 OPENAI_API_KEY=your_openai_key             # 선택: GPT-4o-mini 폴백
 ```
@@ -180,7 +183,7 @@ npx vercel
 |---|---|---|
 | 튜터 페르소나 | `src/app/actions.ts` | `systemPrompt`의 Persona 섹션 수정 |
 | 기본 음성 ID | `src/app/api/generate-audio/route.ts` | `VOICE_ID_MINHEE`, `VOICE_ID_DAL` 상수 변경 |
-| TTS 모델 목록 | `src/components/VoiceSelector.tsx` | `models` 배열에 새 모델 추가/제거 |
+| TTS 품질 프리셋 | `src/lib/tts.ts` | Fast(Flash v2.5) / Stable(Multilingual v2) / Expressive(v3) |
 | 청킹 크기 | `src/lib/script-generator.ts` | `targetMinWords`, `targetMaxWords` 값 조정 |
 | SFX 종류 | `src/lib/script-generator.ts` | Mock 대본의 SFX `content` 문자열 수정 |
 | 테마 색상 | `src/app/page.tsx` | `themeColor`, `bgGradient` 변수 수정 |
@@ -216,8 +219,11 @@ npx vercel
 │       ├── llm-service.ts            # LLM 클라이언트 (Server Action으로 이관됨)
 │       ├── audio-cache.ts            # Blob + ObjectURL 이중 캐시
 │       ├── audio-player.ts           # HTMLAudioElement + AudioContext 래퍼
-│       └── export-utils.ts           # TXT / JSON / SRT 내보내기 유틸
-├── .env.example                      # 환경 변수 템플릿 (API 키 3종)
+│       ├── export-utils.ts           # TXT / JSON / SRT / WAV 내보내기 유틸
+│       └── tts.ts                    # 품질 프리셋 (v3 / Multilingual v2 / Flash v2.5)
+├── tasks/
+│   └── SPEC-product-a.md             # 제품화 A안 스펙
+├── .env.example                      # 환경 변수 템플릿
 ├── .gitignore                        # .env* 패턴으로 시크릿 보호
 ├── DEPLOY.md                         # Vercel 배포 가이드
 ├── package.json                      # Next.js 16, React 19, Framer Motion
@@ -233,9 +239,9 @@ npx vercel
 | 소스 파일 | 14개 |
 | 핵심 컴포넌트 | 4개 (AudioSequencer, ScriptDisplay, Visualizer, VoiceSelector) |
 | API 라우트 | 2개 (`/api/generate-audio`, `/api/voices`) |
-| 지원 TTS 모델 | 5종 (Eleven v3, Turbo v2.5, Flash v2.5, Multilingual v2, English v1) |
+| 지원 TTS 모델 | 3종 프리셋 (v3, Multilingual v2, Flash v2.5) |
 | 지원 LLM | 2종 (Gemini 2.5 Flash, GPT-4o-mini) + Mock 폴백 |
-| 내보내기 포맷 | 3종 (TXT, JSON, SRT) |
+| 내보내기 포맷 | 4종 (TXT, JSON, SRT, WAV) |
 | 학습 모드 | 2종 (Story Mode, Exam Mode) |
 | 난이도 레벨 | 3단계 (Beginner, Intermediate, Advanced) |
 | 수능 문제 유형 | 6종 |

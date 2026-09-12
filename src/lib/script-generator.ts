@@ -93,7 +93,12 @@ import { generateScriptAction } from '@/app/actions';
 // MOCK GENERATION (Fallback)
 // ============================================================================
 
-const generateMockScript = (text: string, mode: Mode, chunks: SemanticChunk[]): ScriptItem[] => {
+const generateMockScript = (
+  _text: string,
+  mode: Mode,
+  chunks: SemanticChunk[],
+  problemType?: ProblemType
+): ScriptItem[] => {
   const items: ScriptItem[] = [];
 
   if (mode === 'children_book') {
@@ -131,7 +136,7 @@ const generateMockScript = (text: string, mode: Mode, chunks: SemanticChunk[]): 
     items.push({ type: 'sfx', content: 'drum roll' });
     items.push({ 
       type: 'speech', 
-      content: '안녕하세요, 여러분의 1등급 메이커 달쌤입니다. [serious] 오늘 가져온 지문, 만만치 않죠? 하지만 저와 함께라면 문제없습니다.',
+      content: `안녕하세요, 여러분의 1등급 메이커 달쌤입니다. [serious] 오늘은 ${problemType ?? '빈칸 추론'} 유형입니다. 지문, 만만치 않죠? 하지만 저와 함께라면 문제없습니다.`,
       voiceSettings: { style: 0.3, stability: 0.8 }
     });
 
@@ -177,7 +182,7 @@ export const generateScript = async (
   // 1. Try LLM Generation first
   let items: ScriptItem[] | null = null;
   try {
-    items = await generateScriptAction(text, mode, level);
+    items = await generateScriptAction(text, mode, level, problemType);
   } catch (e) {
     console.warn("LLM Action failed, falling back to mock", e);
   }
@@ -188,7 +193,7 @@ export const generateScript = async (
     // Simulate API delay for consistency
     await new Promise(resolve => setTimeout(resolve, 1000));
     const chunks = analyzeAndChunkText(text, mode);
-    items = generateMockScript(text, mode, chunks);
+    items = generateMockScript(text, mode, chunks, problemType);
   }
 
   // Construct full script for display

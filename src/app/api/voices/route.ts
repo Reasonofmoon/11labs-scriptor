@@ -42,10 +42,11 @@ export async function GET() {
     console.log(`[ElevenLabs] Successfully fetched ${data.voices?.length || 0} voices`);
 
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[ElevenLabs] Error fetching voices:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: message },
       { status: 500 }
     );
   }

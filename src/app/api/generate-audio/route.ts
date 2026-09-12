@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { FALLBACK_MODEL_ID } from '@/lib/tts';
+
+export const maxDuration = 60;
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
-const VOICE_ID_MINHEE = 'EXAVITQu4vr4xnSDxMaL';
-const VOICE_ID_DAL = 'ErXwobaYiN019PkySvjV';
+// Default-catalog IDs (Bella / Antoni). They expire 2026-12-31.
+// Override with ELEVENLABS_VOICE_MINHEE / ELEVENLABS_VOICE_DAL.
+const VOICE_ID_MINHEE = process.env.ELEVENLABS_VOICE_MINHEE || 'EXAVITQu4vr4xnSDxMaL';
+const VOICE_ID_DAL = process.env.ELEVENLABS_VOICE_DAL || 'ErXwobaYiN019PkySvjV';
+
+const SFX_MODEL_ID = 'eleven_text_to_sound_v2';
+const SFX_DURATION_SECONDS = 1.5;
 
 interface GenerateAudioRequest {
   text: string;
@@ -15,6 +23,35 @@ interface GenerateAudioRequest {
   mode: 'children_book' | 'exam_passage';
   voiceId?: string;
   modelId?: string;
+}
+
+function errorMessageFromStatus(status: number): string {
+  if (status === 401) return 'Invalid API key';
+  if (status === 429) return 'Rate limit exceeded or quota exceeded';
+  if (status === 400) return 'Invalid request parameters';
+  return 'Failed to generate audio';
+}
+
+async function elevenLabsAudio(
+  url: string,
+  body: Record<string, unknown>
+): Promise<{ buffer: ArrayBuffer } | { status: number; details: string }> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Accept: 'audio/mpeg',
+      'Content-Type': 'application/json',
+      'xi-api-key': ELEVENLABS_API_KEY as string,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const details = await response.text();
+    return { status: response.status, details };
+  }
+
+  return { buffer: await response.arrayBuffer() };
 }
 
 export async function POST(req: NextRequest) {
@@ -38,67 +75,57 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid type. Must be "speech" or "sfx"' }, { status: 400 });
     }
 
-    const voiceId = requestedVoiceId || (mode === 'children_book' ? VOICE_ID_MINHEE : VOICE_ID_DAL);
-    const finalText = type === 'sfx' ? `[${text}]` : text;
-    const model = modelId || 'eleven_turbo_v2_5';
+    let result: { buffer: ArrayBuffer } | { status: number; details: string };
 
-    console.log(`[ElevenLabs] Generating audio: Voice=${voiceId}, Model=${model}, Type=${type}, Length=${finalText.length}`);
+    if (type === 'sfx') {
+      console.log(`[ElevenLabs] Generating SFX: "${text.slice(0, 80)}" model=${SFX_MODEL_ID}`);
+      result = await elevenLabsAudio('https://api.elevenlabs.io/v1/sound-generation', {
+        text,
+        duration_seconds: SFX_DURATION_SECONDS,
+        prompt_influence: 0.5,
+        model_id: SFX_MODEL_ID,
+      });
+    } else {
+      const voiceId = requestedVoiceId || (mode === 'children_book' ? VOICE_ID_MINHEE : VOICE_ID_DAL);
+      const model = modelId || FALLBACK_MODEL_ID;
+      const stability = voiceSettings?.stability ?? 0.5;
+      const normalizedStability = [0.0, 0.5, 1.0].reduce((prev, curr) =>
+        Math.abs(curr - stability) < Math.abs(prev - stability) ? curr : prev
+      );
 
-    const stability = voiceSettings?.stability ?? 0.5;
-    const normalizedStability = [0.0, 0.5, 1.0].reduce((prev, curr) =>
-      Math.abs(curr - stability) < Math.abs(prev - stability) ? curr : prev
-    );
+      console.log(`[ElevenLabs] Generating speech: Voice=${voiceId}, Model=${model}, Length=${text.length}`);
 
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'Content-Type': 'application/json',
-        'xi-api-key': ELEVENLABS_API_KEY,
-      },
-      body: JSON.stringify({
-        text: finalText,
+      result = await elevenLabsAudio(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+        text,
         model_id: model,
         voice_settings: {
           stability: normalizedStability,
           similarity_boost: voiceSettings?.similarity_boost ?? 0.75,
-        }
-      }),
-    });
+        },
+      });
+    }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[ElevenLabs] API Error (${response.status}):`, errorText);
-
-      let errorMessage = 'Failed to generate audio';
-      if (response.status === 401) {
-        errorMessage = 'Invalid API key';
-      } else if (response.status === 429) {
-        errorMessage = 'Rate limit exceeded or quota exceeded';
-      } else if (response.status === 400) {
-        errorMessage = 'Invalid request parameters';
-      }
-
+    if ('status' in result) {
+      console.error(`[ElevenLabs] API Error (${result.status}):`, result.details);
       return NextResponse.json(
-        { error: errorMessage, details: errorText },
-        { status: response.status }
+        { error: errorMessageFromStatus(result.status), details: result.details },
+        { status: result.status }
       );
     }
 
-    const audioBuffer = await response.arrayBuffer();
-    console.log(`[ElevenLabs] Audio generated successfully: ${audioBuffer.byteLength} bytes`);
+    console.log(`[ElevenLabs] Audio generated successfully: ${result.buffer.byteLength} bytes`);
 
-    return new NextResponse(audioBuffer, {
+    return new NextResponse(result.buffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
-        'Content-Length': audioBuffer.byteLength.toString(),
+        'Content-Length': result.buffer.byteLength.toString(),
       },
     });
-
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[ElevenLabs] Audio Generation Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: message },
       { status: 500 }
     );
   }

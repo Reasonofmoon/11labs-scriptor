@@ -2,7 +2,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
-import { ScriptItem, Mode, DifficultyLevel } from '@/lib/types';
+import { ScriptItem, Mode, DifficultyLevel, ProblemType } from '@/lib/types';
 
 const genAI = process.env.GOOGLE_GEMINI_API_KEY 
   ? new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY) 
@@ -13,9 +13,10 @@ const openai = process.env.OPENAI_API_KEY
   : null;
 
 export async function generateScriptAction(
-  text: string, 
-  mode: Mode, 
-  level: DifficultyLevel
+  text: string,
+  mode: Mode,
+  level: DifficultyLevel,
+  problemType?: ProblemType
 ): Promise<ScriptItem[] | null> {
   
   if (!genAI && !openai) {
@@ -41,10 +42,13 @@ export async function generateScriptAction(
 
     Rules:
     1. Break the text into digestible chunks.
-    2. Insert SFX items to enhance the atmosphere.
+    2. Insert SFX items to enhance the atmosphere. SFX content must be a short English sound-design prompt (e.g. "soft page turn", "magical chime"), never spoken words.
     3. For 'speech', use Audio Tags like [giggles], [whispers], [serious], [excited] within the content to direct the TTS.
     4. The content should be in Korean (for the tutor's explanation) and English (for the source text reading).
     5. Keep explanations concise and engaging.
+    ${mode === 'exam_passage' && problemType
+      ? `6. This is a Korean CSAT English item of type "${problemType}". Structure the tutor script around how to solve that question type: point to the clue, trap, and answer logic.`
+      : ''}
   `;
 
   const userPrompt = `Here is the text to adapt:\n\n${text}`;
