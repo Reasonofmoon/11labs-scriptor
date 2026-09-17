@@ -1,0 +1,3 @@
+## 2024-05-24 - [Visualizer CanvasGradient Bottleneck & Hydration Mismatch]
+**Learning:** In the HTML5 Canvas visualizer, recreating `CanvasGradient` objects dynamically inside `requestAnimationFrame` causes heavy garbage collection pressure, especially when calculated per-bar for 1024 bars at 60fps. The Web Audio API `Uint8Array` strictly outputs integers from 0-255. Additionally, using `Math.random()` in React render loops for visual idle states causes Next.js hydration mismatches between the server and client.
+**Action:** Pre-calculate exactly 256 `CanvasGradient` objects before the animation loop and look them up by the frequency integer value. Replace inline `Math.random()` with deterministic constant arrays in React components.
