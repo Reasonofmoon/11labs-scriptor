@@ -1,0 +1,3 @@
+## 2026-09-18 - Canvas Optimization using Web Audio API bounds
+**Learning:** The Web Audio API `getByteFrequencyData` strictly returns a `Uint8Array` containing bounded integer values between 0 and 255. In the `Visualizer` component, continuously creating `CanvasGradient` objects on every animation frame for each frequency bin led to extreme Garbage Collection (GC) pressure.
+**Action:** Instead of dynamically generating gradients inside the `requestAnimationFrame` loop, I pre-calculated and cached all 256 possible gradient states in a static array during component initialization (`useEffect`). Now, the render loop only performs an O(1) lookup (`gradients[dataArray[i]]`), drastically improving performance by eliminating unnecessary object allocation.
