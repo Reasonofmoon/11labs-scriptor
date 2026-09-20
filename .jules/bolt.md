@@ -1,0 +1,3 @@
+## 2024-09-20 - Canvas gradient GC pressure
+**Learning:** Web Audio API's `getByteFrequencyData` populates arrays with strictly bounded integer values from 0-255. Dynamically creating `CanvasGradient` objects every frame for these bounded values leads to high object allocation and Garbage Collection pressure during high FPS rendering loops.
+**Action:** Pre-calculate and cache expensive canvas objects (like `createLinearGradient`) outside the `requestAnimationFrame` loop using a 256-length cache array, avoiding recreation. Ensure height calculations strictly handle the 0 edge case (`Math.max(1, height)`) to prevent non-finite DOMExceptions.
