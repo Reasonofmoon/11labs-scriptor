@@ -1,0 +1,4 @@
+
+## 2024-05-18 - CanvasGradient Pre-calculation in Web Audio API Visualizations
+**Learning:** Web Audio API's `getByteFrequencyData` always returns bounded values between 0 and 255. This allows for an optimization where instead of creating a new `CanvasGradient` object for every bar on every frame (which can be over 60,000 objects per second), we can pre-calculate and cache the 256 possible gradients outside the render loop. Also, creating gradients with a height of 0 can throw a `DOMException: The coordinates provided are not finite.`, so it is essential to use `Math.max(1, height)` when caching.
+**Action:** Always check the bounds of data sources when rendering. If the domain is small and finite (like an 8-bit unsigned integer), pre-calculate rendering artifacts to avoid excessive object creation and Garbage Collection pressure in hot loops.
