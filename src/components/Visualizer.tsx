@@ -14,6 +14,9 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   const primaryColor = mode === 'children_book' ? '#34d399' : '#fbbf24';
   const secondaryColor = mode === 'children_book' ? '#14b8a6' : '#f59e0b';
 
+  // Deterministic array to replace Math.random() in visual states to avoid Next.js hydration mismatches
+  const deterministicHeights = [12.4, 18.2, 10.1, 22.5, 15.8, 9.3, 19.7, 14.2];
+
   useEffect(() => {
     if (!isPlaying || !analyser || !canvasRef.current) return;
 
@@ -25,6 +28,21 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     const dataArray = new Uint8Array(bufferLength);
     let animationId: number;
 
+    // ⚡ Bolt Optimization: Pre-calculate CanvasGradients
+    // Web Audio API frequency data is always a Uint8Array (0-255).
+    // Pre-calculating these prevents allocating 256 * 60fps = 15,360 objects per second,
+    // significantly reducing Garbage Collection pressure and main thread stalls.
+    const gradientCache = new Array(256);
+    for (let val = 0; val < 256; val++) {
+      const barHeight = (val / 255) * canvas.height;
+      // Handle zero-height edge case to ensure finite coordinates for createLinearGradient
+      const safeHeight = Math.max(1, barHeight);
+      const gradient = ctx.createLinearGradient(0, canvas.height - safeHeight, 0, canvas.height);
+      gradient.addColorStop(0, primaryColor);
+      gradient.addColorStop(1, secondaryColor);
+      gradientCache[val] = gradient;
+    }
+
     const draw = () => {
       animationId = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
@@ -34,17 +52,16 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
 
       const barWidth = (canvas.width / bufferLength) * 3;
       let x = 0;
+      const centerY = canvas.height / 2;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        // ⚡ Bolt Optimization: Short-circuit rendering for off-screen elements
+        if (x > canvas.width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        const val = dataArray[i];
+        const barHeight = (val / 255) * canvas.height;
 
-        ctx.fillStyle = gradient;
-
-        const centerY = canvas.height / 2;
+        ctx.fillStyle = gradientCache[val];
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
 
         x += barWidth;
@@ -64,11 +81,11 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   if (!isPlaying) {
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
-        {[...Array(8)].map((_, i) => (
+        {deterministicHeights.map((height, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${height}px` }}
           />
         ))}
       </div>
