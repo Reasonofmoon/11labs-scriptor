@@ -25,6 +25,17 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     const dataArray = new Uint8Array(bufferLength);
     let animationId: number;
 
+    // Bolt Optimization: Pre-calculate 256 gradients outside the render loop
+    // Since Web Audio API frequency data is strictly bounded from 0 to 255
+    const gradientCache: CanvasGradient[] = [];
+    for (let val = 0; val < 256; val++) {
+      const h = Math.max(1, (val / 255) * canvas.height);
+      const gradient = ctx.createLinearGradient(0, canvas.height - h, 0, canvas.height);
+      gradient.addColorStop(0, primaryColor);
+      gradient.addColorStop(1, secondaryColor);
+      gradientCache.push(gradient);
+    }
+
     const draw = () => {
       animationId = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
@@ -36,13 +47,14 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        // Bolt Optimization: Short-circuit when bars are drawn off-screen
+        if (x > canvas.width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        const val = dataArray[i];
+        const barHeight = (val / 255) * canvas.height;
 
-        ctx.fillStyle = gradient;
+        // Bolt Optimization: Reuse cached gradients to prevent GC pressure
+        ctx.fillStyle = gradientCache[val];
 
         const centerY = canvas.height / 2;
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
@@ -61,6 +73,10 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     };
   }, [isPlaying, analyser, primaryColor, secondaryColor]);
 
+  // Bolt Optimization: Use deterministic array instead of Math.random() in React render
+  // This prevents hydration mismatches and unnecessary re-renders.
+  const idleHeights = [14, 22, 10, 18, 12, 20, 16, 24];
+
   if (!isPlaying) {
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
@@ -68,7 +84,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${idleHeights[i]}px` }}
           />
         ))}
       </div>
