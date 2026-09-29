@@ -1,0 +1,5 @@
+## 2024-03-22 - Optimize Canvas Rendering and Hydration
+
+**Learning:** Web Audio API frequency data is populated into a `Uint8Array`, which bounds the values from 0 to 255. In the visualizer loop, `ctx.createLinearGradient` was creating thousands of objects per second based on the audio frequency values. Since the values are strictly bounded, these gradients can be exactly pre-calculated and cached. Additionally, `Math.random()` in React render cycles for visual states (like visualizer bars) causes Next.js hydration mismatches between the server and client.
+
+**Action:** Before `requestAnimationFrame` loops in Canvas rendering, check if dynamic objects like gradients depend on bounded arrays (e.g., `Uint8Array`), and pre-calculate them to significantly reduce GC pressure. Replace `Math.random()` used for initial states with deterministic fixed arrays to ensure hydration safety.
