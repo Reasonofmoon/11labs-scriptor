@@ -1,0 +1,3 @@
+## 2024-03-24 - Canvas Visualizer Optimization
+**Learning:** In highly active rendering components like an audio Visualizer, creating objects (like `CanvasGradient`) inside the `requestAnimationFrame` loop per bar creates immense Garbage Collection (GC) pressure, leading to frame drops. Additionally, using `Math.random()` in React initial renders causes Next.js hydration mismatches.
+**Action:** Pre-calculate `CanvasGradient` arrays based on bounded value domains (0-255 for `Uint8Array`) outside the loop, and use static deterministic arrays for visual idle states instead of `Math.random()`.
