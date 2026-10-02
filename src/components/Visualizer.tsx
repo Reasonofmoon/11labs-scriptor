@@ -25,6 +25,20 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
     const dataArray = new Uint8Array(bufferLength);
     let animationId: number;
 
+    // Bolt Optimization: Pre-calculate 256 gradients outside the render loop
+    // Since Web Audio API frequency data is Uint8Array (0-255), we can cache
+    // exact gradient objects to avoid severe GC pressure during requestAnimationFrame.
+    const gradientCache: CanvasGradient[] = [];
+    for (let val = 0; val <= 255; val++) {
+      const h = (val / 255) * canvas.height;
+      // Handle zero height to avoid non-finite coordinates
+      const height = Math.max(1, h);
+      const grad = ctx.createLinearGradient(0, canvas.height - height, 0, canvas.height);
+      grad.addColorStop(0, primaryColor);
+      grad.addColorStop(1, secondaryColor);
+      gradientCache.push(grad);
+    }
+
     const draw = () => {
       animationId = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
@@ -36,13 +50,14 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
+        // Bolt Optimization: Short-circuit off-screen rendering
+        if (x > canvas.width) break;
 
-        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(1, secondaryColor);
+        const val = dataArray[i];
+        const barHeight = (val / 255) * canvas.height;
 
-        ctx.fillStyle = gradient;
+        // Use pre-calculated gradient
+        ctx.fillStyle = gradientCache[val];
 
         const centerY = canvas.height / 2;
         ctx.fillRect(x, centerY - barHeight / 2, barWidth - 2, barHeight);
@@ -62,13 +77,15 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isPlaying, mode, analyse
   }, [isPlaying, analyser, primaryColor, secondaryColor]);
 
   if (!isPlaying) {
+    // Bolt Optimization: Use deterministic array instead of Math.random() to prevent Next.js hydration mismatch
+    const IDLE_HEIGHTS = [12, 18, 14, 22, 16, 20, 10, 15];
     return (
       <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700">
-        {[...Array(8)].map((_, i) => (
+        {IDLE_HEIGHTS.map((height, i) => (
           <div
             key={i}
             className={`w-1 rounded-full ${mode === 'children_book' ? 'bg-emerald-500/30' : 'bg-amber-500/30'}`}
-            style={{ height: `${8 + Math.random() * 16}px` }}
+            style={{ height: `${height}px` }}
           />
         ))}
       </div>
